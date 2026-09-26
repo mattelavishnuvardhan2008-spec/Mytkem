@@ -1,0 +1,278 @@
+:root {
+  --ink: #12181f;
+  --paper: #eef1f0;
+  --card: #1b232c;
+  --line: #2c3844;
+  --gold: #c9a227;
+  --present: #3f9d7d;
+  --absent: #c1443c;
+  --muted: #8fa1ac;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  min-height: 100vh;
+}
+
+/* Auth Page */
+.auth-container {
+  display: flex;
+  min-height: 100vh;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.auth-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 32px;
+  width: 100%;
+  max-width: 380px;
+}
+
+.auth-card h1 {
+  font-size: 1.4rem;
+  margin: 0 0 20px 0;
+  color: #fff;
+}
+
+.form-group {
+  margin-bottom: 16px;
+}
+
+label {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+input[type="text"],
+input[type="password"],
+input[type="number"] {
+  width: 100%;
+  background: var(--ink);
+  color: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 10px 12px;
+  font-size: 1rem;
+  outline: none;
+}
+
+input:focus {
+  border-color: var(--gold);
+}
+
+.btn-submit {
+  width: 100%;
+  background: var(--gold);
+  color: #161616;
+  border: none;
+  border-radius: 4px;
+  padding: 12px;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: opacity 0.2s ease;
+}
+
+.btn-submit:hover {
+  opacity: 0.9;
+}
+
+.err-msg {
+  color: var(--absent);
+  font-size: 0.85rem;
+  margin-top: 14px;
+}
+
+p.note {
+  color: var(--muted);
+  font-size: 0.8rem;
+  margin-top: 20px;
+  line-height: 1.4;
+}
+
+/* Dashboard Page */
+.wrap {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 24px 18px 60px;
+}
+
+a.back-btn {
+  color: var(--gold);
+  font-size: 0.85rem;
+  text-decoration: none;
+  display: inline-block;
+  margin-bottom: 16px;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 20px;
+  margin-top: 16px;
+}
+
+.section-title {
+  font-size: 0.75rem;
+  letter-spacing: 0.5px;
+  color: var(--gold);
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.profile-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 6px;
+  background: var(--gold);
+  color: #161616;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+}
+
+.donut-wrap {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.stats3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.stat {
+  text-align: center;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 10px 4px;
+}
+
+.stat .num {
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.stat .lbl {
+  font-size: 0.72rem;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.result-box {
+  background: var(--ink);
+  border-left: 3px solid var(--gold);
+  padding: 12px;
+  border-radius: 4px;
+  margin-top: 12px;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.bunk-row {
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--line);
+  padding: 10px 0;
+  font-size: 0.9rem;
+}
+
+.bunk-row:last-child {
+  border-bottom: none;
+}
+
+table.subtable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+table.subtable th,
+table.subtable td {
+  text-align: left;
+  padding: 8px 4px;
+  border-bottom: 1px solid var(--line);
+}
+
+table.subtable th {
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+}
+
+.daydate {
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin: 16px 0 8px;
+  color: var(--gold);
+}
+
+.periodgrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.pcell {
+  border-radius: 4px;
+  padding: 8px 6px;
+  font-size: 0.75rem;
+}
+
+.pcell.present {
+  background: rgba(63, 157, 125, 0.15);
+  border: 1px solid var(--present);
+}
+
+.pcell.absent {
+  background: rgba(193, 68, 60, 0.15);
+  border: 1px solid var(--absent);
+}
+
+.pcell .plabel {
+  color: var(--muted);
+  display: block;
+}
+
+.pcell .pstatus {
+  font-weight: 700;
+  display: block;
+  margin-top: 2px;
+}
+
+.pcell.present .pstatus {
+  color: var(--present);
+}
+
+.pcell.absent .pstatus {
+  color: var(--absent);
+}
