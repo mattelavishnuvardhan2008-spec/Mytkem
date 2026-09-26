@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TKREC Attendance Login</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="auth-container">
+    <div class="auth-card">
+      <h1>TKREC Attendance</h1>
+      <form method="post" action="/login">
+        <div class="form-group">
+          <label for="username">Username</label>
+          <input id="username" name="username" type="text" required autofocus>
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input id="password" name="password" type="password" required>
+        </div>
+        <button type="submit" class="btn-submit">Log In</button>
+      </form>
+
+      {% if error %}
+        <div class="err-msg">{{ error }}</div>
+      {% endif %}
+
+      <p class="note">
+        This app runs locally on your machine. Credentials are used solely to fetch your attendance directly from tkrec.in.
+      </p>
+    </div>
+  </div>
+</body>
+</html>
