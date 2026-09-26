@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Attendance Dashboard</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="wrap">
+    <a class="back-btn" href="/">&larr; Log in as someone else</a>
+    <h1 style="font-size: 1.5rem; margin-top: 0;">My Attendance</h1>
+
+    <!-- Profile Header Card -->
+    <div class="card profile-card">
+      <div id="avatar" class="avatar">--</div>
+      <div>
+        <div id="pName" style="font-weight: 600; font-size: 1rem;"></div>
+        <div id="pRoll" style="color: var(--muted); font-size: 0.85rem;"></div>
+      </div>
+    </div>
+
+    <!-- Attendance Overview -->
+    <div class="card">
+      <div class="donut-wrap">
+        <svg width="110" height="110" viewBox="0 0 120 120">
+          <circle cx="60" cy="60" r="52" fill="none" stroke="var(--line)" stroke-width="12"/>
+          <circle id="donutArc" cx="60" cy="60" r="52" fill="none" stroke="var(--present)" stroke-width="12" stroke-linecap="round" transform="rotate(-90 60 60)"/>
+        </svg>
+        <div>
+          <div id="pctBig" class="num" style="font-size: 2rem; font-weight: 700;">--</div>
+          <div style="color: var(--muted); font-size: 0.85rem;">Overall Attendance</div>
+        </div>
+      </div>
+
+      <div class="stats3">
+        <div class="stat"><div id="stHeld" class="num">0</div><div class="lbl">Held</div></div>
+        <div class="stat"><div id="stPresent" class="num" style="color: var(--present);">0</div><div class="lbl">Present</div></div>
+        <div class="stat"><div id="stAbsent" class="num" style="color: var(--absent);">0</div><div class="lbl">Absent</div></div>
+      </div>
+
+      <div style="margin-top: 16px;">
+        <label for="minPerPeriod">Minutes per period</label>
+        <input type="number" id="minPerPeriod" value="50" style="width: 100px;">
+        <div style="color: var(--muted); font-size: 0.85rem; margin-top: 8px;">
+          <strong id="hrsSpent" style="color: var(--paper);">0 hrs 0 mins</strong> spent in class
+        </div>
+      </div>
+    </div>
+
+    <!-- Attendance Target Calculator -->
+    <div class="card">
+      <div class="section-title">Attendance Target Calculator</div>
+      <label for="targetPct">Target Percentage (%)</label>
+      <input type="number" id="targetPct" value="75" style="width: 100px;">
+      <div class="result-box" id="calcResult"></div>
+    </div>
+
+    <!-- Bunk Calculator -->
+    <div class="card">
+      <div class="section-title">Bunk Predictor</div>
+      <label for="perDay">Periods per day</label>
+      <input type="number" id="perDay" value="6" style="width: 100px;">
+      <div id="bunkRows" style="margin-top: 10px;"></div>
+    </div>
+
+    <!-- Subject Breakdown -->
+    <div class="card" id="subjectCard" style="display: none;">
+      <div class="section-title">Subject-wise Breakdown</div>
+      <table class="subtable" id="subjectTable"></table>
+    </div>
+
+    <!-- Daily Log -->
+    <div class="card" id="dayLogCard" style="display: none;">
+      <div class="section-title">Recent Attendance Log</div>
+      <div id="dayLog"></div>
+    </div>
+  </div>
+
+  <script>
+    const DATA = {{ data_json | safe }};
+    let HELD = 0, PRESENT = 0, ABSENT = 0;
+
+    function fmtPct(p, d = 2) {
+      return p.toFixed(d) + '%';
+    }
+
+    function init() {
+      const subjects = DATA.subjects || {};
+      const days = DATA.days || [];
+
+      if (DATA.grand_total) {
+        HELD = DATA.grand_total.held;
+        PRESENT = DATA.grand_total.present;
+      } else if (days.length) {
+        HELD = days.reduce((a, d) => a + d.total, 0);
+        PRESENT = days.reduce((a, d) => a + d.attend, 0);
+      } else {
+        const values = Object.values(subjects);
+        HELD = values.reduce((a, s) => a + s.held, 0);
+        PRESENT = values.reduce((a, s) => a + s.present, 0);
+      }
+      ABSENT = HELD - PRESENT;
+
+      const name = (DATA.profile && DATA.profile.name) || 'Student';
+      const roll = (DATA.profile && DATA.profile.roll) || '';
+      
+      document.getElementById('pName').textContent = name;
+      document.getElementById('pRoll').textContent = roll;
+      document.getElementById('avatar').textContent = name ? name.split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase() : '--';
+
+      const pct = HELD ? (PRESENT / HELD) * 100 : 0;
+      document.getElementById('pctBig').textContent = fmtPct(pct);
+      document.getElementById('stHeld').textContent = HELD;
+      document.getElementById('stPresent').textContent = PRESENT;
+      document.getElementById('stAbsent').textContent = ABSENT;
+
+      // Render Gauge
+      const c = 2 * Math.PI * 52;
+      const arc = document.getElementById('donutArc');
+      arc.style.strokeDasharray = c;
+      arc.style.strokeDashoffset = c * (1 - pct / 100);
+      arc.style.stroke = pct >= 75 ? 'var(--present)' : (pct >= 50 ? 'var(--gold)' : 'var(--absent)');
+
+      runHours();
+      runCalc();
+      runBunk();
+
+      // Subject Table
+      const subKeys = Object.keys(subjects);
+      if (subKeys.length) {
+        document.getElementById('subjectCard').style.display = 'block';
+        let html = '<tr><th>Subject</th><th>Held</th><th>Present</th><th>%</th></tr>';
+        subKeys.forEach(s => {
+          const o = subjects[s];
+          const p = o.held ? (o.present / o.held) * 100 : 0;
+          html += `<tr><td>${s}</td><td>${o.held}</td><td>${o.present}</td><td style="color:${p >= 75 ? 'var(--present)' : 'var(--absent)'}">${p.toFixed(1)}%</td></tr>`;
+        });
+        document.getElementById('subjectTable').innerHTML = html;
+      }
+
+      // Recent Log
+      if (days.length) {
+        document.getElementById('dayLogCard').style.display = 'block';
+        let html = '';
+        days.slice().reverse().slice(0, 12).forEach(day => {
+          html += `<div class="daydate">${day.date} <span style="color:var(--muted);font-weight:400;font-size:.78rem;">(${day.attend}/${day.total})</span></div><div class="periodgrid">`;
+          day.periods.forEach((st, i) => {
+            const cls = st === 'P' ? 'present' : 'absent';
+            const lbl = st === 'P' ? 'Present' : 'Absent';
+            html += `<div class="pcell ${cls}"><span class="plabel">P${i + 1}</span><span class="pstatus">${lbl}</span></div>`;
+          });
+          html += '</div>';
+        });
+        document.getElementById('dayLog').innerHTML = html;
+      }
+    }
+
+    function runHours() {
+      const mins = (parseFloat(document.getElementById('minPerPeriod').value) || 50) * PRESENT;
+      const h = Math.floor(mins / 60);
+      const m = Math.round(mins % 60);
+      document.getElementById('hrsSpent').textContent = `${h} hrs ${m} mins`;
+    }
+
+    function runCalc() {
+      const target = parseFloat(document.getElementById('targetPct').value) || 75;
+      const box = document.getElementById('calcResult');
+      const cur = HELD ? (PRESENT / HELD) * 100 : 0;
+
+      if (cur >= target) {
+        let x = Math.max(Math.floor((PRESENT * 100) / target - HELD), 0);
+        box.innerHTML = `You're at <strong>${fmtPct(cur)}</strong>, which is above ${target}%.<br>You can miss <strong style="color:var(--gold);">${x}</strong> class(es) while maintaining ${target}%.`;
+      } else {
+        let y = Math.max(Math.ceil((target * HELD - 100 * PRESENT) / (100 - target)), 0);
+        box.innerHTML = `You're at <strong>${fmtPct(cur)}</strong>, which is below ${target}%.<br>Attend the next <strong style="color:var(--absent);">${y}</strong> class(es) continuously to reach ${target}%.`;
+      }
+    }
+
+    function runBunk() {
+      const perDay = parseInt(document.getElementById('perDay').value) || 6;
+      const scenarios = [
+        { label: 'Miss 1 class', count: 1 },
+        { label: `Miss half day (${Math.round(perDay / 2)} classes)`, count: Math.round(perDay / 2) },
+        { label: `Miss full day (${perDay} classes)`, count: perDay }
+      ];
+
+      let html = '';
+      scenarios.forEach(s => {
+        const nh = HELD + s.count;
+        const np = nh ? (PRESENT / nh) * 100 : 0;
+        html += `<div class="bunk-row"><span>${s.label}</span><span style="color:${np >= 75 ? 'var(--present)' : 'var(--absent)'}">${fmtPct(np)}</span></div>`;
+      });
+      document.getElementById('bunkRows').innerHTML = html;
+    }
+
+    document.getElementById('minPerPeriod').addEventListener('input', runHours);
+    document.getElementById('targetPct').addEventListener('input', runCalc);
+    document.getElementById('perDay').addEventListener('input', runBunk);
+
+    window.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
