@@ -24,7 +24,7 @@ body {
   min-height: 100vh;
 }
 
-/* LOGIN PAGE DARK THEME STYLING */
+/* LOGIN PAGE STYLING */
 .login-body {
   background: var(--login-dark);
 }
@@ -162,8 +162,13 @@ body {
   font-weight: 700;
   letter-spacing: 0.6px;
   color: var(--text-muted);
-  margin-bottom: 12px;
   text-transform: uppercase;
+}
+
+.legend-subtext {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-bottom: 14px;
 }
 
 .donut-wrap {
@@ -218,6 +223,7 @@ body {
 .text-green { color: var(--green); }
 .text-red { color: var(--red); }
 .text-blue { color: #2563EB; }
+.text-muted { color: var(--text-muted); }
 
 .time-spent-box {
   display: flex;
@@ -385,10 +391,10 @@ table.subtable th {
 .tag-red { color: var(--red); font-weight: 700; }
 
 .daydate {
-  font-size: 0.82rem;
-  font-weight: 700;
+  font-size: 0.85rem;
+  font-weight: 800;
   color: var(--text-primary);
-  margin: 16px 0 8px;
+  margin: 18px 0 8px;
 }
 
 .periodgrid {
@@ -398,9 +404,13 @@ table.subtable th {
 }
 
 .pcell {
-  border-radius: 8px;
-  padding: 10px 8px;
+  border-radius: 10px;
+  padding: 8px 4px;
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 54px;
 }
 
 .p-present {
@@ -415,8 +425,14 @@ table.subtable th {
   color: #991B1B;
 }
 
+.p-null {
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  color: #94A3B8;
+}
+
 .pnum {
-  font-size: 0.68rem;
+  font-size: 0.65rem;
   display: block;
   opacity: 0.7;
 }
@@ -424,6 +440,30 @@ table.subtable th {
 .pstat {
   font-size: 0.78rem;
   font-weight: 700;
-  margin-top: 2px;
+  margin-top: 1px;
   display: block;
+}
+
+.psub {
+  font-size: 0.65rem;
+  font-weight: 600;
+  margin-top: 2px;
+  opacity: 0.8;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.btn-check-another {
+  display: inline-block;
+  background: #FFFFFF;
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-decoration: none;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
 }
