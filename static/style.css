@@ -275,20 +275,17 @@ input[type="range"] {
   font-weight: 600;
 }
 
+/* FIX: Flexible container for target input and calculate button */
 .target-input-group {
   display: flex;
   gap: 8px;
+  width: 100%;
 }
 
-input[type="number"] {
-  background: #F8FAFC;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 8px 12px;
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  outline: none;
+.target-input-group input[type="number"] {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
 }
 
 .btn-black {
@@ -296,10 +293,12 @@ input[type="number"] {
   color: #FFFFFF;
   border: none;
   border-radius: 8px;
-  padding: 8px 16px;
+  padding: 8px 12px;
   font-weight: 600;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .chips-row {
