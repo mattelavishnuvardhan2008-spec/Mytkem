@@ -123,9 +123,24 @@
 
     function fmtPct(p, d = 2) { return p.toFixed(d) + '%'; }
 
+    // Helper function to parse portal dates like "24-09-26" or "24-09-2026"
+    function parseDateStr(str) {
+      if (!str) return 0;
+      const cleanStr = str.split(' ')[0].trim(); // Extract date portion
+      const parts = cleanStr.split('-');
+      if (parts.length === 3) {
+        let day = parseInt(parts[0], 10);
+        let month = parseInt(parts[1], 10) - 1;
+        let year = parseInt(parts[2], 10);
+        if (year < 100) year += 2000;
+        return new Date(year, month, day).getTime();
+      }
+      return 0;
+    }
+
     function init() {
       const subjects = DATA.subjects || {};
-      const days = DATA.days || [];
+      let days = DATA.days || [];
 
       if (DATA.grand_total) {
         HELD = DATA.grand_total.held;
@@ -179,10 +194,14 @@
 
       if (days.length) {
         document.getElementById('dayLogCard').style.display = 'block';
+
+        // Sort days automatically: newest dates (e.g. 24-09-26) at top, descending
+        days.sort((a, b) => parseDateStr(b.date) - parseDateStr(a.date));
+
+        // Take the top 7 most recent days from the portal
+        const recentDays = days.slice(0, 7);
+
         let html = '';
-        // Show last 7 recorded college days from newest (top) to oldest (bottom)
-        const recentDays = days.slice().reverse().slice(0, 7);
-        
         recentDays.forEach(day => {
           html += `<div class="daydate">${day.date} ${day.day ? '- ' + day.day : ''}</div><div class="periodgrid">`;
           
