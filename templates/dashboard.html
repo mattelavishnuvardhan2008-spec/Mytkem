@@ -101,10 +101,19 @@
       <table class="subtable" id="subjectTable"></table>
     </div>
 
-    <!-- Daily Log -->
+    <!-- Daily Log (Latest Attendance) -->
     <div class="card" id="dayLogCard" style="display:none;">
-      <div class="section-subtitle">LATEST ATTENDANCE</div>
+      <div class="section-subtitle" style="margin-bottom: 4px;">LATEST ATTENDANCE</div>
+      <div class="legend-subtext">
+        <span class="text-green">Green</span> = present &nbsp;
+        <span class="text-red">Red</span> = absent &nbsp;
+        <span class="text-muted">—</span> = not marked
+      </div>
       <div id="dayLog"></div>
+      
+      <div style="text-align: center; margin-top: 20px;">
+        <a href="/" class="btn-check-another">Check another</a>
+      </div>
     </div>
   </div>
 
@@ -171,13 +180,34 @@
       if (days.length) {
         document.getElementById('dayLogCard').style.display = 'block';
         let html = '';
-        days.slice().reverse().slice(0, 12).forEach(day => {
-          html += `<div class="daydate">${day.date}</div><div class="periodgrid">`;
-          day.periods.forEach((st, i) => {
-            const isP = st === 'P';
-            const cls = isP ? 'p-present' : 'p-absent';
-            const statusTxt = isP ? 'Present' : 'Absent';
-            html += `<div class="pcell ${cls}"><span class="pnum">P${i+1}</span><span class="pstat">${statusTxt}</span></div>`;
+        // Show last 7 recorded college days from newest (top) to oldest (bottom)
+        const recentDays = days.slice().reverse().slice(0, 7);
+        
+        recentDays.forEach(day => {
+          html += `<div class="daydate">${day.date} ${day.day ? '- ' + day.day : ''}</div><div class="periodgrid">`;
+          
+          const periods = day.periods || [];
+          periods.forEach((pObj, i) => {
+            let st = typeof pObj === 'object' ? pObj.status : pObj;
+            let sub = typeof pObj === 'object' ? (pObj.subject || '') : '';
+
+            let cls = 'p-null';
+            let statusTxt = '—';
+
+            if (st === 'P' || st === 'Present') {
+              cls = 'p-present';
+              statusTxt = 'Present';
+            } else if (st === 'A' || st === 'Absent') {
+              cls = 'p-absent';
+              statusTxt = 'Absent';
+            }
+
+            html += `
+              <div class="pcell ${cls}">
+                <span class="pnum">P${i+1}</span>
+                <span class="pstat">${statusTxt}</span>
+                ${sub ? `<span class="psub">${sub}</span>` : ''}
+              </div>`;
           });
           html += '</div>';
         });
