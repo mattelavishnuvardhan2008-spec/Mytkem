@@ -1,4 +1,3 @@
-
 import os
 from flask import Flask, render_template, request
 import requests
@@ -8,16 +7,11 @@ app = Flask(__name__)
 
 HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
     'Referer': 'https://tkrec.in/'
 }
 
-PROXY_URL = os.getenv('PROXY_URL')
-PROXIES = {'http': PROXY_URL, 'https': PROXY_URL} if PROXY_URL else None
-
 
 def parse_number(element_text, default=0):
-    """Extracts numeric digits safely from scraped text string."""
     if not element_text:
         return default
     cleaned = ''.join(c for c in element_text if c.isdigit())
@@ -31,15 +25,14 @@ def fetch_student_data(username, password):
     payload = {'username': username, 'password': password}
 
     try:
-        response = session.post(login_url, data=payload, proxies=PROXIES, timeout=8)
+        response = session.post(login_url, data=payload, timeout=10)
         response.raise_for_status()
 
         soup = BeautifulSoup(response.text, 'html.parser')
 
-        # Multi-selector matching to ensure accurate value extraction
         student_name = soup.select_one('.student-name, #student-name, .user-name')
-        held_el = soup.select_one('#total-held, .total-held, td:contains("Held") + td')
-        present_el = soup.select_one('#total-present, .total-present, td:contains("Present") + td')
+        held_el = soup.select_one('#total-held, .total-held')
+        present_el = soup.select_one('#total-present, .total-present')
 
         held_val = parse_number(held_el.text if held_el else None, default=100)
         present_val = parse_number(present_el.text if present_el else None, default=75)
@@ -57,25 +50,13 @@ def fetch_student_data(username, password):
             "percentage": pct_val
         }
 
-    except requests.exceptions.Timeout:
-        return {"error": "The college portal took too long to respond. Please try again."}
     except Exception:
-        return {"error": "Failed to fetch attendance analysis. Please check your credentials."}
+        return {"error": "Failed to fetch data. Please check your credentials."}
 
 
 @app.route('/')
 def index():
     return render_template('index.html')
-
-
-@app.route('/privacy')
-def privacy():
-    return render_template('privacy.html')
-
-
-@app.route('/terms')
-def terms():
-    return render_template('terms.html')
 
 
 @app.route('/login', methods=['POST'])
