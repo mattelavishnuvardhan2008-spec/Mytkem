@@ -5,10 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TKREC Attendance Analytics</title>
 
-    <!-- SEO & Social Sharing Meta Tags -->
     <meta name="description" content="Calculate, simulate, and track your TKREC student attendance records effortlessly.">
     <meta property="og:title" content="TKREC Attendance Dashboard">
-    <meta property="og:description" content="Check overall percentage, target calculators, and daily attendance logs.">
+    <meta property="og:description" content="Check overall percentage, target calculators, and daily logs.">
     <meta property="og:image" content="{{ url_for('static', filename='preview.png') }}">
     <meta property="og:url" content="https://mytkem.vercel.app">
     <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
@@ -17,30 +16,36 @@
 </head>
 <body>
     <main class="login-container">
-        <h1>TKREC Attendance Analytics</h1>
-        <p class="subtitle">Enter your college portal credentials to view your dashboard</p>
-
-        {% if error %}
-            <div class="error-banner">{{ error }}</div>
-        {% endif %}
-
-        <form action="/login" method="POST" class="login-form">
-            <div class="form-group">
-                <label for="username">Roll Number / Username</label>
-                <input type="text" id="username" name="username" required placeholder="e.g., 21TK1A05XX">
-            </div>
-
-            <div class="form-group">
-                <label for="password">Portal Password</label>
-                <input type="password" id="password" name="password" required placeholder="••••••••">
-            </div>
-
-            <p class="notice-text">
-                🔒 <strong>Privacy Guarantee:</strong> Credentials are processed transiently in-memory and are never stored or logged on our servers.
+        <div class="card">
+            <h1 style="font-size: 1.5rem; margin-bottom: 5px;">TKREC Attendance Analytics</h1>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 20px;">
+                Enter your college portal credentials to view your dashboard
             </p>
 
-            <button type="submit" class="btn-submit">Sign In to Dashboard</button>
-        </form>
+            {% if error %}
+                <div style="background: rgba(248, 81, 73, 0.1); border: 1px solid var(--accent-red); color: var(--accent-red); padding: 10px; border-radius: 8px; margin-bottom: 15px; font-size: 0.85rem;">
+                    {{ error }}
+                </div>
+            {% endif %}
+
+            <form action="/login" method="POST">
+                <div class="form-group">
+                    <label for="username" style="font-size: 0.85rem; color: var(--text-muted);">Roll Number / Username</label>
+                    <input type="text" id="username" name="username" required placeholder="e.g., 21TK1A05XX">
+                </div>
+
+                <div class="form-group">
+                    <label for="password" style="font-size: 0.85rem; color: var(--text-muted);">Portal Password</label>
+                    <input type="password" id="password" name="password" required placeholder="••••••••">
+                </div>
+
+                <p class="notice-text">
+                    🔒 <strong>Privacy Guarantee:</strong> Credentials are processed transiently in-memory and are never stored or logged on our servers.
+                </p>
+
+                <button type="submit" class="btn-submit">Sign In to Dashboard</button>
+            </form>
+        </div>
 
         <footer>
             <a href="/privacy">Privacy Policy</a> | 
