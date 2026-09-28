@@ -24,6 +24,12 @@ body {
   min-height: 100vh;
 }
 
+/* GOLD COLOR HIGHLIGHT */
+.gold-text {
+  color: var(--login-gold);
+  font-weight: 800;
+}
+
 /* LOGIN PAGE STYLING */
 .login-body {
   background: var(--login-dark);
@@ -40,7 +46,7 @@ body {
 
 .crafted-by-login {
   color: #8FA1AC;
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   font-weight: 800;
   letter-spacing: 1.5px;
   text-transform: uppercase;
@@ -112,7 +118,7 @@ body {
   margin-top: 14px;
 }
 
-/* FIXED TOP BAR FOR DASHBOARD */
+/* EXTENDED FIXED TOP BAR FOR DASHBOARD */
 .top-bar {
   position: sticky;
   top: 0;
@@ -124,8 +130,8 @@ body {
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 10px 16px;
-  font-size: 0.75rem;
+  padding: 22px 16px;
+  font-size: 0.8rem;
   font-weight: 800;
   letter-spacing: 1.5px;
   text-transform: uppercase;
