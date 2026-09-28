@@ -31,10 +31,21 @@ body {
 
 .auth-container {
   display: flex;
+  flex-direction: column;
   min-height: 100vh;
   align-items: center;
   justify-content: center;
   padding: 16px;
+}
+
+.crafted-by-login {
+  color: #8FA1AC;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+  text-align: center;
 }
 
 .auth-card {
@@ -99,6 +110,27 @@ body {
   color: var(--red);
   font-size: 0.85rem;
   margin-top: 14px;
+}
+
+/* FIXED TOP BAR FOR DASHBOARD */
+.top-bar {
+  position: sticky;
+  top: 0;
+  left: 0;
+  width: 100%;
+  background: #0F172A;
+  color: #F8FAFC;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 10px 16px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  z-index: 1000;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 /* DASHBOARD STYLING */
@@ -275,7 +307,6 @@ input[type="range"] {
   font-weight: 600;
 }
 
-/* FIX: Flexible container for target input and calculate button */
 .target-input-group {
   display: flex;
   gap: 8px;
