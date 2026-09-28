@@ -5,9 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TKR College Attendance Analysis</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
+  <!-- Fixed Top Bar -->
+  <div class="top-bar">CRAFTED BY VISHNU</div>
+
   <div class="wrap">
     <div class="header-logo">
       TKR ENGINEERING COLLEGE
@@ -123,10 +126,9 @@
 
     function fmtPct(p, d = 2) { return p.toFixed(d) + '%'; }
 
-    // Helper function to parse portal dates like "24-09-26" or "24-09-2026"
     function parseDateStr(str) {
       if (!str) return 0;
-      const cleanStr = str.split(' ')[0].trim(); // Extract date portion
+      const cleanStr = str.split(' ')[0].trim();
       const parts = cleanStr.split('-');
       if (parts.length === 3) {
         let day = parseInt(parts[0], 10);
@@ -194,11 +196,8 @@
 
       if (days.length) {
         document.getElementById('dayLogCard').style.display = 'block';
-
-        // Sort days automatically: newest dates (e.g. 24-09-26) at top, descending
         days.sort((a, b) => parseDateStr(b.date) - parseDateStr(a.date));
 
-        // Take the top 7 most recent days from the portal
         const recentDays = days.slice(0, 7);
 
         let html = '';
