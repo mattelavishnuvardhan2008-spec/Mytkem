@@ -1,29 +1,33 @@
 # TKREC Attendance Dashboard
 
-A lightweight, locally hosted web application built with Python (Flask) that scrapes and enhances the attendance dashboard from the TKREC student portal (`tkrec.in`).
+A modern, lightweight web application built with Python (Flask) that scrapes and enhances the attendance dashboard from the official TKREC student portal (`tkrec.in`).
 
-It provides real-time statistics, an interactive attendance target calculator, daily logs, and bunk forecasting—all wrapped in a clean, modern user interface.
+It provides real-time attendance statistics, an interactive target calculator, daily attendance logs, and bunk forecasting—all wrapped in a clean, dark-themed user interface.
 
 ---
 
 ## Features
 
-- **Local & Secure:** Runs exclusively on your local machine (`127.0.0.1:5000`). Credentials are sent directly to the official portal for authentication and are never stored anywhere.
-- **Attendance Gauge:** Instant visual overview of your overall percentage status.
-- **Target Calculator:** Calculate how many consecutive classes you need to attend (or how many you can safely miss) to reach or maintain a specific target percentage (e.g., 75%).
-- **Bunk Predictor:** Analyze how skipping 1 class, a half day, or a full day affects your overall attendance percentage.
-- **Time Tracker:** Estimates total hours spent in class based on period duration settings.
-- **Subject-wise Breakdown & Daily Logs:** Visual period-by-period breakdown for recent daily records and individual subjects.
+* **Instant Scraper Integration:** Direct authentication against the official portal with zero credential storage.
+* **Overall Attendance Gauge:** Visual circular progress arc displaying current percentage status.
+* **Target Percentage Calculator:** Calculate how many consecutive classes you need to attend (or safely miss) to reach or maintain target attendance (65%, 75%, 85%, 90%).
+* **Bunk Forecasting:** Preview how skipping 1 class, a half day, or a full day affects your overall percentage.
+* **Live Class Simulator:** Interactive slider to project future percentage increases.
+* **Subject-Wise Breakdown & Daily Log:** Visual period-by-period breakdown for recent daily records and individual subjects.
+* **Responsive Dark Interface:** Styled with clean typography and custom top navigation.
 
 ---
 
 ## Project Structure
 
 ```text
-attendance_app/
-├── app.py                 # Flask server & scraping/parsing logic
+Mytkem/
+├── app.py              # Flask server, scraping & parsing logic
 ├── static/
-│   └── style.css          # Modern dark-themed CSS styling
-└── templates/
-    ├── index.html         # Login interface
-    └── dashboard.html     # Interactive attendance dashboard
+│   └── style.css       # Complete dark & dashboard styling
+├── templates/
+│   ├── index.html      # Login page
+│   └── dashboard.html  # Main analysis dashboard
+├── requirements.txt    # Python dependencies
+├── vercel.json         # Vercel deployment configuration
+└── README.md           # Project documentation
