@@ -1,20 +1,21 @@
 # TKREC Attendance Dashboard
 
-A modern, lightweight web application built with Python (Flask) that scrapes and enhances the attendance dashboard from the official TKREC student portal (`tkrec.in`).
+A modern, highly optimized web application built with Python (Flask) that safely scrapes and enhances the attendance dashboard from the official TKREC student portal. 
 
-It provides real-time attendance statistics, an interactive target calculator, daily attendance logs, and bunk forecasting—all wrapped in a clean, dark-themed user interface.
+It provides real-time attendance statistics, an interactive target calculator, and bunk forecasting, all wrapped in a clean, dark-themed UI with strict privacy and rate-limiting protections.
+
+**Live Demo:** [mytkem.vercel.app](https://mytkem.vercel.app)
 
 ---
 
-## Features
+## Key Features
 
-* **Instant Scraper Integration:** Direct authentication against the official portal with zero credential storage.
-* **Overall Attendance Gauge:** Visual circular progress arc displaying current percentage status.
-* **Target Percentage Calculator:** Calculate how many consecutive classes you need to attend (or safely miss) to reach or maintain target attendance (65%, 75%, 85%, 90%).
-* **Bunk Forecasting:** Preview how skipping 1 class, a half day, or a full day affects your overall percentage.
-* **Live Class Simulator:** Interactive slider to project future percentage increases.
-* **Subject-Wise Breakdown & Daily Log:** Visual period-by-period breakdown for recent daily records and individual subjects.
-* **Responsive Dark Interface:** Styled with clean typography and custom top navigation.
+* **Advanced Scraper Integration:** Direct authentication with the official portal using `requests.Session()` pooling, User-Agent masking, and explicit timeouts to prevent serverless IP blocking.
+* **Privacy-First Architecture:** Zero credential storage. Authentication details are processed transiently in-memory, complying with strict data minimization principles.
+* **Interactive Calculators:** Calculate how many consecutive classes are needed to reach (or safely miss) target percentages (65%, 75%, 85%, 90%).
+* **SEO & Social Ready:** Fully configured with Open Graph (`og:image`, `og:title`) meta tags for rich link previews on WhatsApp, Telegram, and social media.
+* **Accessible UI:** Dark-themed responsive interface built with WCAG-compliant color contrast, explicit form labels, and keyboard-friendly navigation.
+* **Legal Compliance:** Integrated Terms of Service and Privacy Policy pages clarifying data usage and unofficial status.
 
 ---
 
@@ -22,12 +23,17 @@ It provides real-time attendance statistics, an interactive target calculator, d
 
 ```text
 Mytkem/
-├── app.py              # Flask server, scraping & parsing logic
+├── app.py              # Flask server, session pooling, and scraping logic
 ├── static/
-│   └── style.css       # Complete dark & dashboard styling
+│   ├── style.css       # Dark dashboard styling and layout
+│   ├── preview.png     # Open Graph social sharing thumbnail
+│   └── favicon.ico     # Site favicon
 ├── templates/
-│   ├── index.html      # Login page
-│   └── dashboard.html  # Main analysis dashboard
-├── requirements.txt    # Python dependencies
-├── vercel.json         # Vercel deployment configuration
+│   ├── index.html      # Login page (SEO optimized, accessible)
+│   ├── dashboard.html  # Main analysis and charting dashboard
+│   ├── privacy.html    # Privacy policy and zero-storage guarantee
+│   └── terms.html      # Unofficial utility disclaimers
+├── public/
+│   └── robots.txt      # Search engine crawler instructions
+├── requirements.txt    # Python dependencies (Flask, requests, gunicorn)
 └── README.md           # Project documentation
