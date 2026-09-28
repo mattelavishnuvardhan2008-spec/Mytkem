@@ -8,7 +8,7 @@
 </head>
 <body>
     <header class="top-nav">
-        <span>CRAFTED BY <strong>VISHNU</strong></span>
+        CRAFTED BY <strong>VISHNU</strong>
     </header>
 
     <main class="dashboard-container">
@@ -21,11 +21,11 @@
             </div>
         </div>
 
-        <!-- Attendance Overview -->
-        <section class="card gauge-card">
-            <div class="gauge-circle" style="--pct: {{ data.percentage }}%;">
-                <span class="pct-val">{{ data.percentage }}%</span>
-            </div>
+        <!-- Attendance Stats Card -->
+        <section class="card">
+            <h3 style="text-align: center; margin-bottom: 15px; color: var(--accent-gold);">
+                {{ data.percentage }}% Overall Attendance
+            </h3>
             <div class="stats-grid">
                 <div class="stat-box">
                     <span class="num">{{ data.held }}</span>
@@ -42,25 +42,26 @@
             </div>
         </section>
 
-        <!-- Target Calculator -->
-        <section class="card calculator-card">
+        <!-- Calculator Card -->
+        <section class="card">
             <h3>Attendance Target Calculator</h3>
-            <div class="input-group">
-                <label for="targetPct">Target %</label>
+            <div class="form-group" style="margin-top: 15px;">
+                <label for="targetPct" style="font-size: 0.85rem; color: var(--text-muted);">Target Percentage</label>
                 <input type="number" id="targetPct" value="75" min="50" max="100">
-                <button id="calcBtn" onclick="calculateTarget()">Calculate</button>
             </div>
+            <button id="calcBtn" onclick="calculateTarget()">Calculate Target</button>
+            
             <div class="preset-buttons">
                 <button onclick="setTarget(65)">65%</button>
                 <button onclick="setTarget(75)">75%</button>
                 <button onclick="setTarget(85)">85%</button>
                 <button onclick="setTarget(90)">90%</button>
             </div>
-            <div id="targetResult" class="result-box"></div>
+
+            <div id="targetResult" style="margin-top: 15px; text-align: center; font-size: 0.95rem;"></div>
         </section>
     </main>
 
-    <!-- Correctly Wrapped JavaScript -->
     <script>
         const initialData = {
             held: {{ data.held }},
@@ -78,7 +79,7 @@
             const resultBox = document.getElementById('targetResult');
             
             if (isNaN(target) || target <= 0 || target > 100) {
-                resultBox.innerHTML = "<p class='red'>Please enter a valid target percentage between 1 and 100.</p>";
+                resultBox.innerHTML = "<p class='red'>Enter a target between 1 and 100.</p>";
                 return;
             }
 
