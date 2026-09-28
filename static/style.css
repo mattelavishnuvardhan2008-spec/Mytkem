@@ -24,10 +24,12 @@ body {
   min-height: 100vh;
 }
 
-/* GOLD COLOR HIGHLIGHT */
+/* GOLD COLOR HIGHLIGHT WITH SPACING */
 .gold-text {
   color: var(--login-gold);
   font-weight: 800;
+  margin-left: 6px;
+  display: inline-block;
 }
 
 /* LOGIN PAGE STYLING */
