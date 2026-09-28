@@ -1,43 +1,32 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TKREC Attendance Analytics</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TKREC Attendance - Login</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
-<body>
-    <header class="top-nav">
-        CRAFTED BY <strong>VISHNU</strong>
-    </header>
-
-    <main class="login-container">
-        <div class="card">
-            <h1 style="font-size: 1.5rem; margin-bottom: 5px;">TKREC Attendance Analytics</h1>
-            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 20px;">
-                Enter your college portal credentials to view your dashboard
-            </p>
-
-            {% if error %}
-                <div style="background: rgba(248, 81, 73, 0.1); border: 1px solid var(--accent-red); color: var(--accent-red); padding: 10px; border-radius: 8px; margin-bottom: 15px; font-size: 0.85rem;">
-                    {{ error }}
-                </div>
-            {% endif %}
-
-            <form action="/login" method="POST">
-                <div class="form-group">
-                    <label for="username" style="font-size: 0.85rem; color: var(--text-muted);">Roll Number / Username</label>
-                    <input type="text" id="username" name="username" required placeholder="e.g., 21TK1A05XX">
-                </div>
-
-                <div class="form-group">
-                    <label for="password" style="font-size: 0.85rem; color: var(--text-muted);">Portal Password</label>
-                    <input type="password" id="password" name="password" required placeholder="••••••••">
-                </div>
-
-                <button type="submit" class="btn-submit">Sign In to Dashboard</button>
-            </form>
+<body class="login-body">
+  <div class="auth-container">
+    <div class="crafted-by-login">CRAFTED BY <span class="gold-text">&nbsp;VISHNU</span></div>
+    <div class="auth-card">
+      <h1>TKREC Attendance</h1>
+      <form action="/login" method="POST">
+        <div class="form-group">
+          <label for="username">USERNAME</label>
+          <input type="text" id="username" name="username" required autocomplete="off">
         </div>
-    </main>
+        <div class="form-group">
+          <label for="password">PASSWORD</label>
+          <input type="password" id="password" name="password" required>
+        </div>
+        <button type="submit" class="btn-submit">Log In</button>
+      </form>
+      {% if error %}
+      <div class="err-msg">{{ error }}</div>
+      {% endif %}
+    </div>
+  </div>
 </body>
 </html>
