@@ -4,14 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TKREC Attendance Analytics</title>
-
-    <meta name="description" content="Calculate, simulate, and track your TKREC student attendance records effortlessly.">
-    <meta property="og:title" content="TKREC Attendance Dashboard">
-    <meta property="og:description" content="Check overall percentage, target calculators, and daily logs.">
-    <meta property="og:image" content="{{ url_for('static', filename='preview.png') }}">
-    <meta property="og:url" content="https://mytkem.vercel.app">
-    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
-
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
@@ -43,18 +35,9 @@
                     <input type="password" id="password" name="password" required placeholder="••••••••">
                 </div>
 
-                <p class="notice-text">
-                    🔒 <strong>Privacy Guarantee:</strong> Credentials are processed transiently in-memory and are never stored or logged on our servers.
-                </p>
-
                 <button type="submit" class="btn-submit">Sign In to Dashboard</button>
             </form>
         </div>
-
-        <footer>
-            <a href="/privacy">Privacy Policy</a> | 
-            <a href="/terms">Terms & Disclaimer</a>
-        </footer>
     </main>
 </body>
 </html>
