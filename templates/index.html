@@ -23,9 +23,16 @@
         </div>
         <button type="submit" class="btn-submit">Log In</button>
       </form>
+
       {% if error %}
       <div class="err-msg">{{ error }}</div>
       {% endif %}
+
+      <!-- LEGAL LINKS CONTAINER -->
+      <div class="legal-links">
+        <a href="/terms" class="legal-link">Terms & Conditions</a>
+        <a href="/privacy" class="legal-link">Privacy Policy</a>
+      </div>
     </div>
   </div>
 </body>
