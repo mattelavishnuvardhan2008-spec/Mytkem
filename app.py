@@ -6,6 +6,7 @@ import time
 from bs4 import BeautifulSoup
 from flask import Flask, render_template, request
 from flask_compress import Compress
+from flask_talisman import Talisman
 import requests
 
 BASE_URL = "https://tkrec.in"
@@ -22,7 +23,23 @@ HEADERS = {
 }
 
 app = Flask(__name__)
-Compress(app)  # Enables Gzip compression for faster responses
+Compress(app)  # Enables Gzip compression for faster response payloads
+
+# Configure Content Security Policy to allow inline styles/scripts and Google Fonts without rendering issues
+csp = {
+    'default-src': "'self'",
+    'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+    'style-src': ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+    'font-src': ["'self'", "https://fonts.gstatic.com"],
+    'img-src': ["'self'", "data:", "https:"]
+}
+
+# Attach Talisman to resolve missing security headers (CSP, Referrer-Policy, HSTS, etc.)
+Talisman(
+    app,
+    content_security_policy=csp,
+    force_https=True
+)
 
 # In-memory attendance cache to maximize concurrent handling on Render free tier
 ATTENDANCE_CACHE = {}
