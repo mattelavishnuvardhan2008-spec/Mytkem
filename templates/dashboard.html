@@ -3,306 +3,177 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TKR College Attendance Analysis</title>
+  <title>TKREC Attendance - Dashboard</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
-  <!-- Extended Top Bar -->
-  <div class="top-bar">CRAFTED BY <span class="gold-text">&nbsp;VISHNU</span></div>
+  <!-- EXTENDED TOP BAR -->
+  <div class="top-bar">
+    CRAFTED BY <span class="gold-text">&nbsp;VISHNU</span>
+  </div>
 
   <div class="wrap">
-    <div class="header-logo">
-      TKR ENGINEERING COLLEGE
-    </div>
+    <div class="header-logo">TKR ENGINEERING COLLEGE</div>
 
-    <!-- User Profile Header -->
+    <!-- PROFILE CARD -->
     <div class="card profile-card">
-      <div id="avatar" class="avatar">MV</div>
+      <div class="avatar" id="avatarCircle">--</div>
       <div>
-        <div id="pName" class="profile-name">Student Name</div>
-        <div id="pRoll" class="profile-roll">Roll Number</div>
+        <div class="profile-name" id="studentName">Student Name</div>
+        <div class="profile-roll" id="studentRoll">Roll Number</div>
       </div>
     </div>
 
-    <!-- Overall Attendance Card -->
+    <!-- OVERALL ATTENDANCE CARD -->
     <div class="card">
-      <div class="section-subtitle">OVERALL</div>
+      <div class="section-subtitle">OVERALL ATTENDANCE</div>
       <div class="donut-wrap">
         <div class="donut-container">
-          <svg width="120" height="120" viewBox="0 0 120 120">
-            <circle cx="60" cy="60" r="50" fill="none" stroke="#E2E8F0" stroke-width="10"/>
-            <circle id="donutArc" cx="60" cy="60" r="50" fill="none" stroke="#10B981" stroke-width="10" stroke-linecap="round" transform="rotate(-90 60 60)"/>
+          <svg viewBox="0 0 36 36" style="width:100%; height:100%; transform: rotate(-90deg);">
+            <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" 
+                  fill="none" stroke="#E2E8F0" stroke-width="3.8"/>
+            <path id="donutPath" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" 
+                  fill="none" stroke="#6366F1" stroke-width="3.8" stroke-dasharray="0, 100" stroke-linecap="round"/>
           </svg>
           <div class="donut-text">
-            <div id="pctBig" class="pct-num">0%</div>
-            <div class="pct-lbl">overall</div>
+            <div class="pct-num" id="overallPct">0%</div>
+            <div class="pct-lbl">Total</div>
           </div>
         </div>
       </div>
 
       <div class="stats3">
-        <div class="stat"><div id="stHeld" class="num text-dark">0</div><div class="lbl">Held</div></div>
-        <div class="stat"><div id="stPresent" class="num text-green">0</div><div class="lbl">Present</div></div>
-        <div class="stat"><div id="stAbsent" class="num text-red">0</div><div class="lbl">Absent</div></div>
+        <div class="stat">
+          <div class="num text-dark" id="statHeld">0</div>
+          <div class="lbl">Total Conducted</div>
+        </div>
+        <div class="stat">
+          <div class="num text-green" id="statPresent">0</div>
+          <div class="lbl">Attended</div>
+        </div>
+        <div class="stat">
+          <div class="num text-red" id="statAbsent">0</div>
+          <div class="lbl">Absent</div>
+        </div>
       </div>
 
-      <div class="time-spent-box">
-        <span class="clock-icon">⏱</span>
-        <span id="hrsSpent" class="hrs-text">0 hrs 0 mins spent in college</span>
-      </div>
-
-      <!-- Live Simulation Slider -->
+      <!-- BUNK SIMULATOR PROJECTIONS -->
       <div class="sim-container">
         <div class="sim-header">
-          <span>Simulate attending next</span>
-          <strong id="simVal">+0 classes</strong>
+          <span>Bunk Impact</span>
+          <span id="bunkTag" class="tag-green">Safe</span>
         </div>
-        <input type="range" id="simSlider" min="0" max="100" value="0">
-        <div class="sim-result">
-          Projected: <strong id="simPct">0%</strong> <span id="simDiff" class="diff-tag"></span>
+        <div class="bunk-row">
+          <span>Miss half day (3 periods)</span>
+          <span id="missHalfVal" class="text-dark">--</span>
+        </div>
+        <div class="bunk-row">
+          <span>Miss 1 day (6 periods)</span>
+          <span id="missOneVal" class="text-dark">--</span>
         </div>
       </div>
     </div>
 
-    <!-- Attendance Target Calculator -->
+    <!-- LATEST ATTENDANCE LOGS -->
     <div class="card">
-      <div class="section-subtitle">ATTENDANCE TARGET CALCULATOR</div>
-      
-      <label class="input-lbl">Target %</label>
-      <div class="target-input-group">
-        <input type="number" id="targetPct" value="75">
-        <button id="calcBtn" class="btn-black" onclick="runCalc()">Calculate</button>
-      </div>
-
-      <div class="chips-row">
-        <button class="chip" onclick="setTarget(65)">65%</button>
-        <button class="chip" onclick="setTarget(75)">75%</button>
-        <button class="chip" onclick="setTarget(85)">85%</button>
-        <button class="chip" onclick="setTarget(90)">90%</button>
-      </div>
-
-      <div id="calcResult" class="result-box"></div>
-    </div>
-
-    <!-- Bunk Calculator -->
-    <div class="card">
-      <div class="section-subtitle">BUNK CALCULATOR</div>
-      <div class="input-subtext">If you skip standard class schedules:</div>
-      
-      <div style="margin-top: 10px; margin-bottom: 12px;">
-        <label class="input-lbl">Periods per day</label>
-        <input type="number" id="perDay" value="6" style="width: 80px;" oninput="runBunk()">
-      </div>
-
-      <div id="bunkRows"></div>
-    </div>
-
-    <!-- Subject Wise Breakdown -->
-    <div class="card" id="subjectCard" style="display:none;">
-      <div class="section-subtitle">SUBJECT-WISE BREAKDOWN</div>
-      <table class="subtable" id="subjectTable"></table>
-    </div>
-
-    <!-- Daily Log (Latest Attendance) -->
-    <div class="card" id="dayLogCard" style="display:none;">
-      <div class="section-subtitle" style="margin-bottom: 4px;">LATEST ATTENDANCE</div>
+      <div class="section-subtitle">LATEST ATTENDANCE</div>
       <div class="legend-subtext">
-        <span class="text-green">Green</span> = present &nbsp;
-        <span class="text-red">Red</span> = absent &nbsp;
+        <span class="tag-green">Green</span> = present &nbsp;
+        <span class="tag-red">Red</span> = absent &nbsp;
         <span class="text-muted">—</span> = not marked
       </div>
-      <div id="dayLog"></div>
-      
-      <div style="text-align: center; margin-top: 20px;">
-        <a href="/" class="btn-check-another">Check another</a>
-      </div>
+      <div id="daysList"></div>
+    </div>
+
+    <div style="text-align: center; margin-top: 24px;">
+      <a href="/" class="btn-check-another">← Log Out & Check Another</a>
     </div>
   </div>
 
+  <!-- PASS DATA FROM FLASK -->
   <script>
-    const DATA = {{ data_json | safe }};
-    let HELD = 0, PRESENT = 0, ABSENT = 0;
+    const rawData = {{ data_json | safe }};
 
-    function fmtPct(p, d = 2) { return p.toFixed(d) + '%'; }
+    document.addEventListener("DOMContentLoaded", function() {
+      if (!rawData) return;
 
-    function parseDateStr(str) {
-      if (!str) return 0;
-      const cleanStr = str.split(' ')[0].trim();
-      const parts = cleanStr.split('-');
-      if (parts.length === 3) {
-        let day = parseInt(parts[0], 10);
-        let month = parseInt(parts[1], 10) - 1;
-        let year = parseInt(parts[2], 10);
-        if (year < 100) year += 2000;
-        return new Date(year, month, day).getTime();
-      }
-      return 0;
-    }
+      // 1. Render Profile
+      const name = rawData.profile.name || "Student";
+      const roll = rawData.profile.roll || "N/A";
+      document.getElementById("studentName").innerText = name;
+      document.getElementById("studentRoll").innerText = roll;
+      document.getElementById("avatarCircle").innerText = name.charAt(0).toUpperCase();
 
-    function init() {
-      const subjects = DATA.subjects || {};
-      let days = DATA.days || [];
+      // 2. Render Overall Stats
+      if (rawData.grand_total) {
+        const held = rawData.grand_total.held || 0;
+        const present = rawData.grand_total.present || 0;
+        const absent = held - present;
+        const pct = held > 0 ? ((present / held) * 100).toFixed(2) : 0;
 
-      if (DATA.grand_total) {
-        HELD = DATA.grand_total.held;
-        PRESENT = DATA.grand_total.present;
-      } else if (days.length) {
-        HELD = days.reduce((a, d) => a + d.total, 0);
-        PRESENT = days.reduce((a, d) => a + d.attend, 0);
-      } else {
-        const values = Object.values(subjects);
-        HELD = values.reduce((a, s) => a + s.held, 0);
-        PRESENT = values.reduce((a, s) => a + s.present, 0);
-      }
-      ABSENT = HELD - PRESENT;
+        document.getElementById("statHeld").innerText = held;
+        document.getElementById("statPresent").innerText = present;
+        document.getElementById("statAbsent").innerText = absent;
+        document.getElementById("overallPct").innerText = pct + "%";
 
-      const name = (DATA.profile && DATA.profile.name) || 'Student';
-      const roll = (DATA.profile && DATA.profile.roll) || '';
-      
-      document.getElementById('pName').textContent = name;
-      document.getElementById('pRoll').textContent = roll;
-      document.getElementById('avatar').textContent = name ? name.split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase() : 'MV';
+        // Animate Donut Chart
+        const path = document.getElementById("donutPath");
+        path.setAttribute("stroke-dasharray", `${pct}, 100`);
+        path.setAttribute("stroke", pct >= 75 ? "#10B981" : "#EF4444");
 
-      const pct = HELD ? (PRESENT / HELD) * 100 : 0;
-      document.getElementById('pctBig').textContent = fmtPct(pct);
-      document.getElementById('stHeld').textContent = HELD;
-      document.getElementById('stPresent').textContent = PRESENT;
-      document.getElementById('stAbsent').textContent = ABSENT;
+        // Calculate Bunk Impact
+        const halfPct = held + 3 > 0 ? (((present) / (held + 3)) * 100).toFixed(2) : 0;
+        const halfDiff = (halfPct - pct).toFixed(2);
+        document.getElementById("missHalfVal").innerHTML = `<b>${halfPct}%</b> <span class="diff-tag text-red">${halfDiff}%</span>`;
 
-      const c = 2 * Math.PI * 50;
-      const arc = document.getElementById('donutArc');
-      arc.style.strokeDasharray = c;
-      arc.style.strokeDashoffset = c * (1 - pct / 100);
-      arc.style.stroke = pct >= 75 ? '#10B981' : (pct >= 65 ? '#F59E0B' : '#EF4444');
+        const onePct = held + 6 > 0 ? (((present) / (held + 6)) * 100).toFixed(2) : 0;
+        const oneDiff = (onePct - pct).toFixed(2);
+        document.getElementById("missOneVal").innerHTML = `<b>${onePct}%</b> <span class="diff-tag text-red">${oneDiff}%</span>`;
 
-      runHours();
-      runCalc();
-      runBunk();
-      runSimulation();
-
-      const subKeys = Object.keys(subjects);
-      if (subKeys.length) {
-        document.getElementById('subjectCard').style.display = 'block';
-        let html = '<tr><th>SUBJECT</th><th>HELD</th><th>PRESENT</th><th>%</th></tr>';
-        subKeys.forEach(s => {
-          const o = subjects[s];
-          const p = o.held ? (o.present / o.held) * 100 : 0;
-          const statusClass = p >= 75 ? 'tag-green' : (p >= 65 ? 'tag-gold' : 'tag-red');
-          html += `<tr><td><strong>${s}</strong></td><td>${o.held}</td><td>${o.present}</td><td><span class="${statusClass}">${p.toFixed(1)}%</span></td></tr>`;
-        });
-        document.getElementById('subjectTable').innerHTML = html;
+        const bunkTag = document.getElementById("bunkTag");
+        if (pct >= 75) {
+          bunkTag.innerText = "Safe";
+          bunkTag.className = "tag-green";
+        } else {
+          bunkTag.innerText = "Low Attendance";
+          bunkTag.className = "tag-red";
+        }
       }
 
-      if (days.length) {
-        document.getElementById('dayLogCard').style.display = 'block';
-        days.sort((a, b) => parseDateStr(b.date) - parseDateStr(a.date));
+      // 3. Render Daily Logs
+      const daysContainer = document.getElementById("daysList");
+      if (rawData.days && rawData.days.length > 0) {
+        rawData.days.forEach(day => {
+          const dayDiv = document.createElement("div");
+          dayDiv.className = "daydate";
+          dayDiv.innerText = day.date;
 
-        const recentDays = days.slice(0, 7);
+          const gridDiv = document.createElement("div");
+          gridDiv.className = "periodgrid";
 
-        let html = '';
-        recentDays.forEach(day => {
-          html += `<div class="daydate">${day.date} ${day.day ? '- ' + day.day : ''}</div><div class="periodgrid">`;
-          
-          const periods = day.periods || [];
-          periods.forEach((pObj, i) => {
-            let st = typeof pObj === 'object' ? pObj.status : pObj;
-            let sub = typeof pObj === 'object' ? (pObj.subject || '') : '';
-
-            let cls = 'p-null';
-            let statusTxt = '—';
-
-            if (st === 'P' || st === 'Present') {
-              cls = 'p-present';
-              statusTxt = 'Present';
-            } else if (st === 'A' || st === 'Absent') {
-              cls = 'p-absent';
-              statusTxt = 'Absent';
+          day.periods.forEach((p, idx) => {
+            const cell = document.createElement("div");
+            if (p === "P") {
+              cell.className = "pcell p-present";
+              cell.innerHTML = `<span class="pnum">P${idx+1}</span><span class="pstat">Present</span>`;
+            } else if (p === "A") {
+              cell.className = "pcell p-absent";
+              cell.innerHTML = `<span class="pnum">P${idx+1}</span><span class="pstat">Absent</span>`;
+            } else {
+              cell.className = "pcell p-null";
+              cell.innerHTML = `<span class="pnum">P${idx+1}</span><span class="pstat">—</span>`;
             }
-
-            html += `
-              <div class="pcell ${cls}">
-                <span class="pnum">P${i+1}</span>
-                <span class="pstat">${statusTxt}</span>
-                ${sub ? `<span class="psub">${sub}</span>` : ''}
-              </div>`;
+            gridDiv.appendChild(cell);
           });
-          html += '</div>';
+
+          daysContainer.appendChild(dayDiv);
+          daysContainer.appendChild(gridDiv);
         });
-        document.getElementById('dayLog').innerHTML = html;
-      }
-    }
-
-    function runHours() {
-      const mins = 50 * PRESENT;
-      const h = Math.floor(mins / 60);
-      const m = Math.round(mins % 60);
-      document.getElementById('hrsSpent').textContent = `${h} hrs ${m} mins spent in college`;
-    }
-
-    function setTarget(val) {
-      document.getElementById('targetPct').value = val;
-      runCalc();
-    }
-
-    function runCalc() {
-      const target = parseFloat(document.getElementById('targetPct').value) || 75;
-      const perDay = parseInt(document.getElementById('perDay').value) || 6;
-      const box = document.getElementById('calcResult');
-      const cur = HELD ? (PRESENT / HELD) * 100 : 0;
-
-      if (cur >= target) {
-        let maxBunk = Math.max(Math.floor((PRESENT * 100) / target - HELD), 0);
-        let days = (maxBunk / perDay).toFixed(1);
-        box.className = "result-box box-blue";
-        box.innerHTML = `You're at <strong>${fmtPct(cur)}</strong>, above ${target}%.<br>You can miss <strong class="text-blue">${maxBunk}</strong> more class(es) and stay at ${target}%.<br><span class="sub-calc-text">• ≈ ${days} days off fit into safety.</span>`;
       } else {
-        let needClasses = Math.max(Math.ceil((target * HELD - 100 * PRESENT) / (100 - target)), 0);
-        let days = (needClasses / perDay).toFixed(1);
-        box.className = "result-box box-red";
-        box.innerHTML = `You're at <strong>${fmtPct(cur)}</strong>, below ${target}%.<br>Attend the next <strong class="text-red">${needClasses}</strong> class(es) continuously to reach ${target}%.<br><span class="sub-calc-text">• ≈ ${days} consecutive college days.</span>`;
+        daysContainer.innerHTML = '<div class="input-subtext">No daily logs found.</div>';
       }
-    }
-
-    function runBunk() {
-      const perDay = parseInt(document.getElementById('perDay').value) || 6;
-      const scenarios = [
-        { label: 'Miss 1 class', count: 1 },
-        { label: `Miss half day (${Math.round(perDay / 2)})`, count: Math.round(perDay / 2) },
-        { label: `Miss 1 day (${perDay})`, count: perDay }
-      ];
-
-      let html = '';
-      scenarios.forEach(s => {
-        const nh = HELD + s.count;
-        const np = nh ? (PRESENT / nh) * 100 : 0;
-        const diff = np - (HELD ? (PRESENT / HELD) * 100 : 0);
-        html += `<div class="bunk-row"><span>${s.label}</span><div><strong class="text-dark">${fmtPct(np)}</strong> <span class="diff-tag text-red">${diff.toFixed(2)}%</span></div></div>`;
-      });
-      document.getElementById('bunkRows').innerHTML = html;
-    }
-
-    function runSimulation() {
-      const slider = document.getElementById('simSlider');
-      const addCount = parseInt(slider.value) || 0;
-      document.getElementById('simVal').textContent = `+${addCount} classes`;
-
-      const newHeld = HELD + addCount;
-      const newPresent = PRESENT + addCount;
-      const newPct = newHeld ? (newPresent / newHeld) * 100 : 0;
-      const origPct = HELD ? (PRESENT / HELD) * 100 : 0;
-      const diff = newPct - origPct;
-
-      document.getElementById('simPct').textContent = fmtPct(newPct);
-      const diffEl = document.getElementById('simDiff');
-      diffEl.textContent = `${diff >= 0 ? '+' : ''}${diff.toFixed(2)}%`;
-      diffEl.className = diff >= 0 ? 'diff-tag text-green' : 'diff-tag text-red';
-    }
-
-    document.getElementById('simSlider').addEventListener('input', runSimulation);
-    document.getElementById('targetPct').addEventListener('input', runCalc);
-
-    window.addEventListener('DOMContentLoaded', init);
+    });
   </script>
 </body>
 </html>
