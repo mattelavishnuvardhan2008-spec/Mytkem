@@ -4,3 +4,4 @@ beautifulsoup4
 gunicorn
 flask-compress
 flask-talisman
+cachetools
