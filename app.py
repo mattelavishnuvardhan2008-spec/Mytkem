@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 import json
 import re
+import sys
 import time
 from bs4 import BeautifulSoup
-from cachetools import TTLCache
 from flask import Flask, render_template, request
 from flask_compress import Compress
 from flask_talisman import Talisman
@@ -23,25 +23,27 @@ HEADERS = {
 }
 
 app = Flask(__name__)
-Compress(app)
+Compress(app)  # Enables Gzip compression for faster response payloads
 
-# Hardened Content Security Policy
+# Configure Content Security Policy to allow inline styles/scripts and Google Fonts without rendering issues
 csp = {
     'default-src': "'self'",
-    'script-src': ["'self'"],
+    'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
     'style-src': ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
     'font-src': ["'self'", "https://fonts.gstatic.com"],
     'img-src': ["'self'", "data:", "https:"]
 }
 
+# Attach Talisman to resolve missing security headers (CSP, Referrer-Policy, HSTS, etc.)
 Talisman(
     app,
     content_security_policy=csp,
     force_https=True
 )
 
-# Bounded in-memory cache to prevent OOM memory exhaustion (max 500 items, TTL 30 minutes)
-ATTENDANCE_CACHE = TTLCache(maxsize=500, ttl=1800)
+# In-memory attendance cache to maximize concurrent handling on Render free tier
+ATTENDANCE_CACHE = {}
+CACHE_TTL = 1800  # 30 minutes in seconds
 
 
 def text_of(el):
@@ -167,19 +169,19 @@ def login():
     username = request.form.get("username", "").strip()
     password = request.form.get("password", "")
 
-    # Input validation guard
     if not username or not password:
         return render_template("index.html", error="Please enter both Roll Number and Password.")
 
-    if len(username) > 30 or not username.isalnum():
-        return render_template("index.html", error="Invalid Roll Number format.")
+    now = time.time()
 
     # 1. CHECK IN-MEMORY CACHE
     if username in ATTENDANCE_CACHE:
-        cached_data = ATTENDANCE_CACHE[username]
-        return render_template("dashboard.html", data_json=json.dumps(cached_data))
+        cached_entry = ATTENDANCE_CACHE[username]
+        # Return instantly if data is less than 30 minutes old
+        if (now - cached_entry["timestamp"]) < CACHE_TTL:
+            return render_template("dashboard.html", data_json=json.dumps(cached_entry["data"]))
 
-    # 2. PERFORM PORTAL SCRAPING
+    # 2. PERFORM PORTAL SCRAPING (IF NO CACHE / EXPIRED)
     try:
         html = authenticate_and_fetch_html(username, password)
         parsed_data = parse_dashboard_html(html)
@@ -187,8 +189,11 @@ def login():
         if not parsed_data["subjects"] and not parsed_data["days"] and not parsed_data["grand_total"]:
             return render_template("index.html", error="Logged in, but no attendance tables were found.")
 
-        # Store in bounded TTLCache
-        ATTENDANCE_CACHE[username] = parsed_data
+        # Save result to cache
+        ATTENDANCE_CACHE[username] = {
+            "data": parsed_data,
+            "timestamp": now
+        }
 
         return render_template("dashboard.html", data_json=json.dumps(parsed_data))
 
