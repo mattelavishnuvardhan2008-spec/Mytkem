@@ -4,17 +4,12 @@ import re
 import sys
 from bs4 import BeautifulSoup
 from flask import Flask, render_template, request
-
-try:
-    import requests
-except ImportError:
-    sys.exit("Missing required library 'requests'. Run: pip install requests")
+import requests
 
 BASE_URL = "https://tkrec.in"
 LOGIN_PAGE = f"{BASE_URL}/index.php"
 LOGIN_ACTION = f"{BASE_URL}/student_login_action.php"
 
-# Real browser headers to bypass IP filtering and standard bot detectors
 HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
@@ -26,24 +21,24 @@ HEADERS = {
 
 app = Flask(__name__)
 
-
 def text_of(el):
     return el.get_text(strip=True) if el else ""
-
 
 def authenticate_and_fetch_html(username, password):
     session = requests.Session()
     session.headers.update(HEADERS)
 
-    # 1. Fetch main page to retrieve cookie and CSRF token
+    # Fetch initial page
     res = session.get(LOGIN_PAGE, timeout=10)
     res.raise_for_status()
 
-    match = re.search(r'name="token"\s+value="([^"]+)"', res.text)
-    if not match:
+    # FIX 1: Robust DOM token lookup instead of regex
+    soup = BeautifulSoup(res.text, "html.parser")
+    token_input = soup.find("input", {"name": "token"})
+    if not token_input or not token_input.get("value"):
         raise RuntimeError("Failed to extract login token. Portal structure may have changed.")
 
-    token = match.group(1)
+    token = token_input["value"]
 
     login_payload = {
         "token": token,
@@ -52,7 +47,7 @@ def authenticate_and_fetch_html(username, password):
         "submit": "Login",
     }
 
-    # 2. Authenticate with Referer header attached to match natural browser behavior
+    # Authenticate
     res_login = session.post(
         LOGIN_ACTION,
         data=login_payload,
@@ -68,8 +63,8 @@ def authenticate_and_fetch_html(username, password):
             raise RuntimeError("Login failed. Check your username and password.")
         html_content = res_dashboard.text
 
+    session.close()
     return html_content
-
 
 def parse_dashboard_html(html):
     soup = BeautifulSoup(html, "html.parser")
@@ -129,19 +124,15 @@ def parse_dashboard_html(html):
 
     return data
 
-
 @app.after_request
 def add_cache_headers(response):
-    """Enable browser caching for static assets to cut request speeds in half."""
     if request.path.startswith('/static/'):
         response.headers['Cache-Control'] = 'public, max-age=31536000, immutable'
     return response
 
-
 @app.route("/", methods=["GET"])
 def index():
     return render_template("index.html", error=None)
-
 
 @app.route("/login", methods=["POST"])
 def login():
@@ -157,21 +148,23 @@ def login():
 
         return render_template("dashboard.html", data_json=json.dumps(parsed_data))
 
+    # FIX 2: Explicit network & timeout exception handling
+    except requests.exceptions.Timeout:
+        return render_template("index.html", error="The college portal is taking too long to respond. Please try again.")
+    except requests.exceptions.RequestException:
+        return render_template("index.html", error="Could not reach the college portal. Please check your connection or try later.")
     except RuntimeError as err:
         return render_template("index.html", error=str(err))
-    except Exception as err:
-        return render_template("index.html", error=f"Something went wrong: {err}")
-
+    except Exception:
+        return render_template("index.html", error="An unexpected error occurred. Please check your credentials and try again.")
 
 @app.route("/terms")
 def terms():
     return render_template("terms.html")
 
-
 @app.route("/privacy")
 def privacy():
     return render_template("privacy.html")
-
 
 if __name__ == "__main__":
     app.run(debug=True)
