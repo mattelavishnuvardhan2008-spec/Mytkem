@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy - TKREC Attendance</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    .legal-container {
+      max-width: 500px;
+      margin: 40px auto;
+      padding: 28px;
+      background: var(--login-card);
+      border: 1px solid var(--login-border);
+      border-radius: 12px;
+      color: #FFFFFF;
+    }
+    .legal-container h1 { 
+      font-size: 1.4rem; 
+      margin-top: 0;
+      margin-bottom: 6px; 
+      color: #FFFFFF;
+    }
+    .legal-date {
+      font-size: 0.75rem;
+      color: #8FA1AC;
+      margin-bottom: 20px;
+    }
+    .legal-container h2 { 
+      font-size: 0.95rem; 
+      color: var(--login-gold); 
+      margin-top: 20px; 
+      margin-bottom: 8px;
+    }
+    .legal-container p { 
+      font-size: 0.82rem; 
+      color: #8FA1AC; 
+      line-height: 1.6; 
+      margin: 0;
+    }
+    .back-btn { 
+      display: inline-block; 
+      margin-top: 24px; 
+      color: var(--login-gold); 
+      text-decoration: none; 
+      font-size: 0.85rem; 
+      font-weight: 700; 
+    }
+    .back-btn:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body class="login-body">
+  <div class="auth-container">
+    <div class="crafted-by-login">CRAFTED BY <span class="gold-text">&nbsp;VISHNU</span></div>
+    
+    <div class="legal-container">
+      <h1>Privacy Policy</h1>
+      <div class="legal-date">Last updated: September 2026</div>
+
+      <h2>1. Information We Access</h2>
+      <p>When you log in, your student roll number and credentials are strictly used to request and fetch attendance data directly from the official TKREC portal on your behalf.</p>
+
+      <h2>2. No Credential Storage</h2>
+      <p>We do not collect, save, or store your passwords, usernames, or attendance data in any server database or persistent storage.</p>
+
+      <h2>3. Session In-Memory Processing</h2>
+      <p>All authentication tokens and attendance details are held temporarily in memory during the request execution and discarded as soon as your page loads.</p>
+
+      <h2>4. Analytics & Third-Party Sharing</h2>
+      <p>No personal student information or login activity is ever shared, rented, or sold to third-party services or ad networks.</p>
+
+      <a href="/" class="back-btn">← Back to Login</a>
+    </div>
+  </div>
+</body>
+</html>
