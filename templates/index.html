@@ -12,7 +12,7 @@
     <div class="crafted-by-login">CRAFTED BY <span class="gold-text">&nbsp;VISHNU</span></div>
     <div class="auth-card">
       <h1>TKREC Attendance</h1>
-      <form action="/login" method="POST">
+      <form action="/login" method="POST" id="loginForm">
         <div class="form-group">
           <label for="username">USERNAME</label>
           <input type="text" id="username" name="username" required autocomplete="off">
@@ -21,19 +21,29 @@
           <label for="password">PASSWORD</label>
           <input type="password" id="password" name="password" required>
         </div>
-        <button type="submit" class="btn-submit">Log In</button>
+        <!-- Button updated with ID -->
+        <button type="submit" class="btn-submit" id="submitBtn">Log In</button>
       </form>
 
       {% if error %}
       <div class="err-msg">{{ error }}</div>
       {% endif %}
 
-      <!-- LEGAL LINKS CONTAINER -->
       <div class="legal-links">
         <a href="/terms" class="legal-link">Terms & Conditions</a>
         <a href="/privacy" class="legal-link">Privacy Policy</a>
       </div>
     </div>
   </div>
+
+  <!-- FIX 3: Loading Indicator JS -->
+  <script>
+    document.getElementById('loginForm').addEventListener('submit', function() {
+      const btn = document.getElementById('submitBtn');
+      btn.innerText = 'Fetching Attendance...';
+      btn.style.opacity = '0.7';
+      btn.style.cursor = 'not-allowed';
+    });
+  </script>
 </body>
 </html>
