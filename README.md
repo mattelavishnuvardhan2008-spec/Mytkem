@@ -1,33 +1,33 @@
-# TKREC Attendance Dashboard
+# TKREC Attendance Tracker & Visualizer
 
-A modern, lightweight web application built with Python (Flask) that scrapes and enhances the attendance dashboard from the official TKREC student portal (`tkrec.in`).
+A fast, lightweight web application built with Flask and Python designed to help students at **TKR College of Engineering and Technology** effortlessly check, visualize, and analyze their attendance metrics.
 
-It provides real-time attendance statistics, an interactive target calculator, daily attendance logs, and bunk forecasting—all wrapped in a clean, dark-themed user interface.
+![Python](https://img.shields.io/badge/Python-3.9+-blue.svg)
+![Flask](https://img.shields.io/badge/Flask-3.0+-green.svg)
+![Deployment](https://img.shields.io/badge/Deployment-Vercel-black.svg)
 
 ---
 
-## Features
+## Key Features
 
-* **Instant Scraper Integration:** Direct authentication against the official portal with zero credential storage.
-* **Overall Attendance Gauge:** Visual circular progress arc displaying current percentage status.
-* **Target Percentage Calculator:** Calculate how many consecutive classes you need to attend (or safely miss) to reach or maintain target attendance (65%, 75%, 85%, 90%).
-* **Bunk Forecasting:** Preview how skipping 1 class, a half day, or a full day affects your overall percentage.
-* **Live Class Simulator:** Interactive slider to project future percentage increases.
-* **Subject-Wise Breakdown & Daily Log:** Visual period-by-period breakdown for recent daily records and individual subjects.
-* **Responsive Dark Interface:** Styled with clean typography and custom top navigation.
+* **Real-time Attendance Scraping:** Authenticates securely with the official TKREC student portal to fetch up-to-date attendance records instantly.
+* **Interactive Dashboard:** Beautiful dark-themed interface showcasing overall attendance percentage, subject-wise breakdowns, and daily logs.
+* **Smart Bunk & Projection Simulator:** Interactive tools to calculate how many classes you can afford to skip (or need to attend) to hit target attendance percentages.
+* **Privacy-First Design:** Zero database storage. User credentials and attendance details are processed in-memory during session requests and immediately discarded.
+* **Terms & Privacy Integration:** Built-in dedicated legal pages outlining data privacy and app terms.
 
 ---
 
 ## Project Structure
 
 ```text
-Mytkem/
-├── app.py              # Flask server, scraping & parsing logic
+├── app.py                  # Flask application server & web scraper logic
+├── requirements.txt        # Python dependencies
+├── vercel.json             # Deployment configuration for Vercel
 ├── static/
-│   └── style.css       # Complete dark & dashboard styling
-├── templates/
-│   ├── index.html      # Login page
-│   └── dashboard.html  # Main analysis dashboard
-├── requirements.txt    # Python dependencies
-├── vercel.json         # Vercel deployment configuration
-└── README.md           # Project documentation
+│   └── style.css           # Global styling for login, dashboard, and legal pages
+└── templates/
+    ├── index.html          # Login page template
+    ├── dashboard.html      # Attendance visualizer & calculator dashboard
+    ├── terms.html          # Terms & Conditions page
+    └── privacy.html        # Privacy Policy page
