@@ -120,6 +120,28 @@ body {
   margin-top: 14px;
 }
 
+/* LEGAL LINKS AT BOTTOM OF LOGIN CARD */
+.legal-links {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 20px;
+  padding-top: 10px;
+}
+
+.legal-link {
+  color: #8FA1AC;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.legal-link:hover {
+  color: var(--login-gold);
+  text-decoration: underline;
+}
+
 /* EXTENDED FIXED TOP BAR FOR DASHBOARD */
 .top-bar {
   position: sticky;
