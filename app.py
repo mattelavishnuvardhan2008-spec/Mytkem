@@ -2,8 +2,10 @@
 import json
 import re
 import sys
+import time
 from bs4 import BeautifulSoup
 from flask import Flask, render_template, request
+from flask_compress import Compress
 import requests
 
 BASE_URL = "https://tkrec.in"
@@ -20,9 +22,16 @@ HEADERS = {
 }
 
 app = Flask(__name__)
+Compress(app)  # Enables Gzip compression for faster responses
+
+# In-memory attendance cache to maximize concurrent handling on Render free tier
+ATTENDANCE_CACHE = {}
+CACHE_TTL = 1800  # 30 minutes in seconds
+
 
 def text_of(el):
     return el.get_text(strip=True) if el else ""
+
 
 def authenticate_and_fetch_html(username, password):
     session = requests.Session()
@@ -32,7 +41,7 @@ def authenticate_and_fetch_html(username, password):
     res = session.get(LOGIN_PAGE, timeout=10)
     res.raise_for_status()
 
-    # FIX 1: Robust DOM token lookup instead of regex
+    # Robust DOM token lookup
     soup = BeautifulSoup(res.text, "html.parser")
     token_input = soup.find("input", {"name": "token"})
     if not token_input or not token_input.get("value"):
@@ -65,6 +74,7 @@ def authenticate_and_fetch_html(username, password):
 
     session.close()
     return html_content
+
 
 def parse_dashboard_html(html):
     soup = BeautifulSoup(html, "html.parser")
@@ -124,21 +134,37 @@ def parse_dashboard_html(html):
 
     return data
 
+
 @app.after_request
 def add_cache_headers(response):
     if request.path.startswith('/static/'):
         response.headers['Cache-Control'] = 'public, max-age=31536000, immutable'
     return response
 
+
 @app.route("/", methods=["GET"])
 def index():
     return render_template("index.html", error=None)
+
 
 @app.route("/login", methods=["POST"])
 def login():
     username = request.form.get("username", "").strip()
     password = request.form.get("password", "")
 
+    if not username or not password:
+        return render_template("index.html", error="Please enter both Roll Number and Password.")
+
+    now = time.time()
+
+    # 1. CHECK IN-MEMORY CACHE
+    if username in ATTENDANCE_CACHE:
+        cached_entry = ATTENDANCE_CACHE[username]
+        # Return instantly if data is less than 30 minutes old
+        if (now - cached_entry["timestamp"]) < CACHE_TTL:
+            return render_template("dashboard.html", data_json=json.dumps(cached_entry["data"]))
+
+    # 2. PERFORM PORTAL SCRAPING (IF NO CACHE / EXPIRED)
     try:
         html = authenticate_and_fetch_html(username, password)
         parsed_data = parse_dashboard_html(html)
@@ -146,9 +172,14 @@ def login():
         if not parsed_data["subjects"] and not parsed_data["days"] and not parsed_data["grand_total"]:
             return render_template("index.html", error="Logged in, but no attendance tables were found.")
 
+        # Save result to cache
+        ATTENDANCE_CACHE[username] = {
+            "data": parsed_data,
+            "timestamp": now
+        }
+
         return render_template("dashboard.html", data_json=json.dumps(parsed_data))
 
-    # FIX 2: Explicit network & timeout exception handling
     except requests.exceptions.Timeout:
         return render_template("index.html", error="The college portal is taking too long to respond. Please try again.")
     except requests.exceptions.RequestException:
@@ -158,13 +189,16 @@ def login():
     except Exception:
         return render_template("index.html", error="An unexpected error occurred. Please check your credentials and try again.")
 
+
 @app.route("/terms")
 def terms():
     return render_template("terms.html")
 
+
 @app.route("/privacy")
 def privacy():
     return render_template("privacy.html")
+
 
 if __name__ == "__main__":
     app.run(debug=True)
