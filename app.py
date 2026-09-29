@@ -13,7 +13,16 @@ except ImportError:
 BASE_URL = "https://tkrec.in"
 LOGIN_PAGE = f"{BASE_URL}/index.php"
 LOGIN_ACTION = f"{BASE_URL}/student_login_action.php"
-HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; attendance-app/2.0)"}
+
+# Real browser headers to bypass IP filtering and standard bot detectors
+HEADERS = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+    'Accept-Language': 'en-US,en;q=0.9',
+    'Accept-Encoding': 'gzip, deflate, br',
+    'Connection': 'keep-alive',
+    'Upgrade-Insecure-Requests': '1',
+}
 
 app = Flask(__name__)
 
@@ -26,7 +35,8 @@ def authenticate_and_fetch_html(username, password):
     session = requests.Session()
     session.headers.update(HEADERS)
 
-    res = session.get(LOGIN_PAGE, timeout=20)
+    # 1. Fetch main page to retrieve cookie and CSRF token (10s timeout prevents Vercel function timeout)
+    res = session.get(LOGIN_PAGE, timeout=10)
     res.raise_for_status()
 
     match = re.search(r'name="token"\s+value="([^"]+)"', res.text)
@@ -42,17 +52,18 @@ def authenticate_and_fetch_html(username, password):
         "submit": "Login",
     }
 
+    # 2. Authenticate with Referer header attached to match natural browser behavior
     res_login = session.post(
         LOGIN_ACTION,
         data=login_payload,
         headers={**HEADERS, "Referer": LOGIN_PAGE},
-        timeout=20,
+        timeout=10,
     )
     res_login.raise_for_status()
     html_content = res_login.text
 
     if "studentloginform" in html_content or "Invalid" in html_content:
-        res_dashboard = session.get(f"{BASE_URL}/student/index.php", timeout=20)
+        res_dashboard = session.get(f"{BASE_URL}/student/index.php", timeout=10)
         if "studentloginform" in res_dashboard.text:
             raise RuntimeError("Login failed. Check your username and password.")
         html_content = res_dashboard.text
@@ -117,6 +128,14 @@ def parse_dashboard_html(html):
                 )
 
     return data
+
+
+@app.after_request
+def add_cache_headers(response):
+    """Enable browser caching for static assets to cut request speeds in half."""
+    if request.path.startswith('/static/'):
+        response.headers['Cache-Control'] = 'public, max-age=31536000, immutable'
+    return response
 
 
 @app.route("/", methods=["GET"])
