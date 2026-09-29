@@ -35,7 +35,7 @@ def authenticate_and_fetch_html(username, password):
     session = requests.Session()
     session.headers.update(HEADERS)
 
-    # 1. Fetch main page to retrieve cookie and CSRF token (10s timeout prevents Vercel function timeout)
+    # 1. Fetch main page to retrieve cookie and CSRF token
     res = session.get(LOGIN_PAGE, timeout=10)
     res.raise_for_status()
 
@@ -161,6 +161,16 @@ def login():
         return render_template("index.html", error=str(err))
     except Exception as err:
         return render_template("index.html", error=f"Something went wrong: {err}")
+
+
+@app.route("/terms")
+def terms():
+    return render_template("terms.html")
+
+
+@app.route("/privacy")
+def privacy():
+    return render_template("privacy.html")
 
 
 if __name__ == "__main__":
