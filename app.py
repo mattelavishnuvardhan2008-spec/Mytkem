@@ -9,11 +9,14 @@ from flask_talisman import Talisman
 import requests
 
 BASE_URL = "https://tkrec.in"
+LOGIN_PAGE = f"{BASE_URL}/index.php"
+LOGIN_ACTION = f"{BASE_URL}/student_login_action.php"
 
 HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
     'Accept-Language': 'en-US,en;q=0.9',
+    'Accept-Encoding': 'gzip, deflate, br',
     'Connection': 'keep-alive',
     'Upgrade-Insecure-Requests': '1',
 }
@@ -29,7 +32,13 @@ csp = {
     'img-src': ["'self'", "data:", "https:"]
 }
 
-Talisman(app, content_security_policy=csp, force_https=True)
+Talisman(
+    app,
+    content_security_policy=csp,
+    force_https=True
+)
+
+# Cache up to 500 roll numbers for 30 minutes
 ATTENDANCE_CACHE = TTLCache(maxsize=500, ttl=1800)
 
 
@@ -41,94 +50,52 @@ def authenticate_and_fetch_html(username, password):
     session = requests.Session()
     session.headers.update(HEADERS)
 
-    # 1. First GET request to establish PHP Session Cookies
-    res_home = session.get(BASE_URL, timeout=12)
-    res_home.raise_for_status()
+    # 1. Establish PHP Session Cookies first by visiting the home URL
+    try:
+        session.get(BASE_URL, timeout=10)
+    except Exception as e:
+        print(f"Base site request warning: {e}")
 
-    soup = BeautifulSoup(res_home.text, "html.parser")
+    # 2. Fetch login page to capture any hidden form tokens
+    res = session.get(LOGIN_PAGE, timeout=10)
+    res.raise_for_status()
 
-    # Locate the Student Login form
-    login_form = None
-    for form in soup.find_all("form"):
-        form_txt = form.get_text().lower()
-        if "student" in form_txt or "login" in form_txt:
-            login_form = form
-            break
-
-    if not login_form:
-        login_form = soup
-
-    # Locate input field names dynamically (handles BeeS software conventions)
-    user_input = (
-        login_form.find("input", {"name": re.compile(r"user|roll|htno|txtuser", re.I)}) or
-        login_form.find("input", {"type": "text"})
-    )
-    pass_input = (
-        login_form.find("input", {"name": re.compile(r"pass|pwd|txtpass", re.I)}) or
-        login_form.find("input", {"type": "password"})
+    soup = BeautifulSoup(res.text, "html.parser")
+    token_input = (
+        soup.find("input", {"name": "token"}) or
+        soup.find("input", {"name": "csrf_token"}) or
+        soup.find("input", {"name": "csrf"})
     )
 
-    user_field_name = user_input.get("name") if (user_input and user_input.get("name")) else "username"
-    pass_field_name = pass_input.get("name") if (pass_input and pass_input.get("name")) else "password"
+    token = token_input["value"] if (token_input and token_input.get("value")) else ""
 
-    # Action URL resolution
-    action_url = f"{BASE_URL}/student_login_action.php"
-    if login_form and login_form.name == "form" and login_form.get("action"):
-        act = login_form["action"].strip()
-        if act.startswith("http"):
-            action_url = act
-        elif act:
-            action_url = f"{BASE_URL}/{act.lstrip('/')}"
+    if not token_input:
+        print("DEBUG WARNING: Token field not found in login HTML response.")
 
-    # Build payload including hidden CSRF or session tokens
-    payload = {}
-    for hidden in login_form.find_all("input", {"type": "hidden"}):
-        if hidden.get("name") and hidden.get("value") is not None:
-            payload[hidden["name"]] = hidden["value"]
+    login_payload = {
+        "username": username,
+        "password": password,
+        "submit": "Login",
+    }
+    if token:
+        login_payload["token"] = token
 
-    payload[user_field_name] = username
-    payload[pass_field_name] = password
-
-    # Include submit trigger parameter if present
-    submit_btn = login_form.find("input", {"type": "submit"}) or login_form.find("button", {"type": "submit"})
-    if submit_btn and submit_btn.get("name"):
-        payload[submit_btn["name"]] = submit_btn.get("value", "Login")
-
-    # 2. Submit Login POST request
+    # 3. Perform login POST request with initialized cookies and referer
     res_login = session.post(
-        action_url,
-        data=payload,
-        headers={**HEADERS, "Referer": BASE_URL},
-        allow_redirects=True,
-        timeout=12,
+        LOGIN_ACTION,
+        data=login_payload,
+        headers={**HEADERS, "Referer": LOGIN_PAGE},
+        timeout=10,
     )
     res_login.raise_for_status()
-
     html_content = res_login.text
 
-    # 3. Handle redirection to student dashboard / attendance page
-    dashboard_candidates = [
-        f"{BASE_URL}/student/index.php",
-        f"{BASE_URL}/student/attendance.php",
-        f"{BASE_URL}/student/home.php",
-        f"{BASE_URL}/student/student_home.php"
-    ]
-
-    # Verify if login was rejected
+    # 4. Check whether authentication succeeded or redirected
     if "studentloginform" in html_content.lower() or "invalid" in html_content.lower():
-        authenticated = False
-        for target in dashboard_candidates:
-            try:
-                res_dash = session.get(target, timeout=8)
-                if "login" not in res_dash.url and len(res_dash.text) > 1000:
-                    html_content = res_dash.text
-                    authenticated = True
-                    break
-            except Exception:
-                continue
-
-        if not authenticated:
-            raise RuntimeError("Login failed. Please check your Roll Number and Password.")
+        res_dashboard = session.get(f"{BASE_URL}/student/index.php", timeout=10)
+        if "studentloginform" in res_dashboard.text.lower():
+            raise RuntimeError("Login failed. Check your username and password.")
+        html_content = res_dashboard.text
 
     session.close()
     return html_content
@@ -154,7 +121,7 @@ def parse_dashboard_html(html):
 
         header_text = " ".join(text_of(c) for c in rows[0].find_all(["td", "th"])).lower()
 
-        if any(k in header_text for k in ["subject", "code", "pres", "attd", "held", "total"]):
+        if "subject" in header_text or "code" in header_text:
             for row in rows:
                 cells = row.find_all(["td", "th"])
                 if len(cells) < 3:
@@ -180,13 +147,15 @@ def parse_dashboard_html(html):
                     continue
 
                 mid = [text_of(c) for c in cells[1:-2]]
-                periods = ["P" if p.upper() in ("P", "PRESENT") else "A" for p in mid if p.upper() in ("P", "A", "PRESENT", "ABSENT")]
+                periods = [p.upper() for p in mid if p.upper() in ("P", "A")]
 
                 total_txt, attend_txt = text_of(cells[-2]), text_of(cells[-1])
                 total = int(total_txt) if total_txt.isdigit() else len(periods)
                 attend = int(attend_txt) if attend_txt.isdigit() else periods.count("P")
 
-                data["days"].append({"date": date, "periods": periods, "total": total, "attend": attend})
+                data["days"].append(
+                    {"date": date, "periods": periods, "total": total, "attend": attend}
+                )
 
     return data
 
@@ -234,7 +203,7 @@ def login():
     except RuntimeError as err:
         return render_template("index.html", error=str(err))
     except Exception as e:
-        print(f"Error during login execution: {e}")
+        print(f"Unexpected login error: {e}")
         return render_template("index.html", error="An unexpected error occurred. Please check your credentials and try again.")
 
 
