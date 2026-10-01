@@ -16,7 +16,6 @@ HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
     'Accept-Language': 'en-US,en;q=0.9',
-    'Accept-Encoding': 'gzip, deflate, br',
     'Connection': 'keep-alive',
     'Upgrade-Insecure-Requests': '1',
 }
@@ -24,7 +23,6 @@ HEADERS = {
 app = Flask(__name__)
 Compress(app)
 
-# Content Security Policy configured to permit frontend analysis and dashboard chart rendering
 csp = {
     'default-src': "'self'",
     'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
@@ -39,7 +37,6 @@ Talisman(
     force_https=True
 )
 
-# Bounded TTL + LRU Cache: max 500 records, automatically expires after 30 minutes (1800s)
 ATTENDANCE_CACHE = TTLCache(maxsize=500, ttl=1800)
 
 
@@ -51,29 +48,23 @@ def authenticate_and_fetch_html(username, password):
     session = requests.Session()
     session.headers.update(HEADERS)
 
-    # 1. Establish PHP Session Cookies first
+    # 1. Establish session cookies
     try:
         session.get(BASE_URL, timeout=10)
     except Exception as e:
         print(f"Base site request warning: {e}")
 
-    # 2. Fetch login page
+    # 2. Fetch login page & CSRF token if present
     res = session.get(LOGIN_PAGE, timeout=10)
     res.raise_for_status()
 
-    # Look for hidden token or CSRF inputs
     soup = BeautifulSoup(res.text, "html.parser")
     token_input = (
         soup.find("input", {"name": "token"}) or
         soup.find("input", {"name": "csrf_token"}) or
         soup.find("input", {"name": "csrf"})
     )
-
     token = token_input["value"] if (token_input and token_input.get("value")) else ""
-
-    if not token_input:
-        print("DEBUG WARNING: Token field not found in login HTML response.")
-        print("Received HTML snippet:", res.text[:300])
 
     login_payload = {
         "username": username,
@@ -83,21 +74,37 @@ def authenticate_and_fetch_html(username, password):
     if token:
         login_payload["token"] = token
 
-    # Authenticate
+    # 3. Submit Login
     res_login = session.post(
         LOGIN_ACTION,
         data=login_payload,
         headers={**HEADERS, "Referer": LOGIN_PAGE},
+        allow_redirects=True,
         timeout=10,
     )
     res_login.raise_for_status()
+
+    # 4. Check potential portal endpoints where attendance tables reside
+    target_urls = [
+        res_login.url,
+        f"{BASE_URL}/student/index.php",
+        f"{BASE_URL}/student/attendance.php",
+        f"{BASE_URL}/student/home.php"
+    ]
+
     html_content = res_login.text
 
-    if "studentloginform" in html_content or "Invalid" in html_content:
-        res_dashboard = session.get(f"{BASE_URL}/student/index.php", timeout=10)
-        if "studentloginform" in res_dashboard.text:
-            raise RuntimeError("Login failed. Check your username and password.")
-        html_content = res_dashboard.text
+    # If login form is still displayed, iterate through candidate sub-pages
+    if "studentloginform" in html_content.lower() or "invalid" in html_content.lower():
+        authenticated = False
+        for target in target_urls[1:]:
+            res_sub = session.get(target, timeout=10)
+            if "studentloginform" not in res_sub.text.lower() and len(res_sub.text) > 1000:
+                html_content = res_sub.text
+                authenticated = True
+                break
+        if not authenticated:
+            raise RuntimeError("Login failed. Please check your Roll Number and Password.")
 
     session.close()
     return html_content
@@ -107,31 +114,39 @@ def parse_dashboard_html(html):
     soup = BeautifulSoup(html, "html.parser")
     data = {"profile": {}, "subjects": {}, "grand_total": None, "days": []}
 
+    # Extract Profile Details
     for row in soup.find_all("tr"):
         cells = row.find_all(["td", "th"])
         if len(cells) >= 2:
             label = text_of(cells[0]).lower()
-            if "roll no" in label:
+            if "roll" in label or "htno" in label or "hall ticket" in label:
                 data["profile"]["roll"] = text_of(cells[1])
-            elif "student" in label and "name" in label:
+            elif "student" in label or "name" in label:
                 data["profile"]["name"] = text_of(cells[1])
 
-    for table in soup.find_all("table"):
+    # Extract Attendance Tables
+    tables = soup.find_all("table")
+    print(f"DEBUG: Found {len(tables)} table elements on response page.")
+
+    for idx, table in enumerate(tables):
         rows = table.find_all("tr")
         if not rows:
             continue
 
         header_text = " ".join(text_of(c) for c in rows[0].find_all(["td", "th"])).lower()
+        print(f"DEBUG Table {idx} Headers: {header_text}")
 
-        if "subject" in header_text:
+        # Subject-wise attendance table matching
+        if any(keyword in header_text for keyword in ["subject", "code", "pres", "attd", "held", "total"]):
             for row in rows:
                 cells = row.find_all(["td", "th"])
-                if len(cells) < 4:
+                if len(cells) < 3:
                     continue
+                
                 subj = text_of(cells[0])
                 c_txt, a_txt = text_of(cells[1]), text_of(cells[2])
 
-                if subj.lower().startswith("total"):
+                if subj.lower().startswith("total") or "grand" in subj.lower():
                     if c_txt.isdigit() and a_txt.isdigit():
                         data["grand_total"] = {"held": int(c_txt), "present": int(a_txt)}
                     continue
@@ -139,19 +154,21 @@ def parse_dashboard_html(html):
                 if c_txt.isdigit() and a_txt.isdigit():
                     data["subjects"][subj] = {"held": int(c_txt), "present": int(a_txt)}
 
-        if "date" in header_text and ("total" in header_text or "attend" in header_text):
+        # Day-wise / Date-wise attendance table matching
+        if "date" in header_text:
             for row in rows[1:]:
                 cells = row.find_all(["td", "th"])
                 if len(cells) < 3:
                     continue
                 date = text_of(cells[0])
-                if not re.match(r"^\d{1,2}-\d{1,2}-\d{2,4}$", date):
+                if not re.match(r"^\d{1,2}[-/\.]\d{1,2}[-/\.]\d{2,4}$", date):
                     continue
 
                 mid = [text_of(c) for c in cells[1:-2]]
-                periods = [p.upper() for p in mid if p.upper() in ("P", "A")]
-                total_txt, attend_txt = text_of(cells[-2]), text_of(cells[-1])
+                periods = [p.upper() for p in mid if p.upper() in ("P", "A", "PRESENT", "ABSENT")]
+                periods = ["P" if p in ("P", "PRESENT") else "A" for p in periods]
 
+                total_txt, attend_txt = text_of(cells[-2]), text_of(cells[-1])
                 total = int(total_txt) if total_txt.isdigit() else len(periods)
                 attend = int(attend_txt) if attend_txt.isdigit() else periods.count("P")
 
@@ -179,28 +196,24 @@ def login():
     username = request.form.get("username", "").strip()
     password = request.form.get("password", "")
 
-    # Input validation guard
     if not username or not password:
         return render_template("index.html", error="Please enter both Roll Number and Password.")
 
     if len(username) > 40:
         return render_template("index.html", error="Invalid Roll Number length.")
 
-    # 1. CHECK IN-MEMORY TTL CACHE
     if username in ATTENDANCE_CACHE:
         return render_template("dashboard.html", data_json=json.dumps(ATTENDANCE_CACHE[username]))
 
-    # 2. PERFORM PORTAL SCRAPING
     try:
         html = authenticate_and_fetch_html(username, password)
         parsed_data = parse_dashboard_html(html)
 
         if not parsed_data["subjects"] and not parsed_data["days"] and not parsed_data["grand_total"]:
+            print("Parsing completed, but no records matched expected criteria.")
             return render_template("index.html", error="Logged in, but no attendance tables were found.")
 
-        # Store directly in TTLCache
         ATTENDANCE_CACHE[username] = parsed_data
-
         return render_template("dashboard.html", data_json=json.dumps(parsed_data))
 
     except requests.exceptions.Timeout:
@@ -209,7 +222,8 @@ def login():
         return render_template("index.html", error="Could not reach the college portal. Please check your connection or try later.")
     except RuntimeError as err:
         return render_template("index.html", error=str(err))
-    except Exception:
+    except Exception as e:
+        print(f"Unhandled exception during login flow: {e}")
         return render_template("index.html", error="An unexpected error occurred. Please check your credentials and try again.")
 
 
