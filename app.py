@@ -4,39 +4,22 @@ import math
 import os
 import re
 from bs4 import BeautifulSoup
-from cachetools import TTLCache
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, jsonify
 from flask_compress import Compress
 from flask_talisman import Talisman
-
-# Anti-Bot TLS Fingerprinting
-try:
-    from curl_cffi import requests as curl_requests
-    HAS_CURL_CFFI = True
-except ImportError:
-    import requests
-    HAS_CURL_CFFI = False
-
-BASE_URL = "https://tkrec.in"
-LOGIN_PAGE = f"{BASE_URL}/index.php"
-LOGIN_ACTION = f"{BASE_URL}/student_login_action.php"
-
-HEADERS = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-    'Accept-Language': 'en-US,en;q=0.9',
-    'Connection': 'keep-alive',
-}
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', os.urandom(24).hex())
 
 Compress(app)
+
+# Updated CSP to allow client-side fetches to CORS proxies
 csp = {
     'default-src': "'self'",
     'script-src': ["'self'", "'unsafe-inline'"],
     'style-src': ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
     'font-src': ["'self'", "https://fonts.gstatic.com"],
+    'connect-src': ["'self'", "https://api.allorigins.win", "https://corsproxy.io"],
     'img-src': ["'self'", "data:", "https:"]
 }
 
@@ -48,17 +31,12 @@ Talisman(
     session_cookie_http_only=True
 )
 
-# 30-minute server cache to mitigate rate-limiting and college portal IP blocks
-ATTENDANCE_CACHE = TTLCache(maxsize=500, ttl=1800)
-
 
 def text_of(el):
-    """Safely extracts stripped text from BeautifulSoup elements."""
     return el.get_text(strip=True) if el else ""
 
 
 def calculate_analysis(held, present, target_pct=75.0):
-    """Calculates attendance status, bunkable classes, or needed classes."""
     if held <= 0:
         return {"current_pct": 0.0, "status": "No Data", "margin_message": "No classes recorded yet."}
 
@@ -82,70 +60,7 @@ def calculate_analysis(held, present, target_pct=75.0):
         }
 
 
-def get_http_session():
-    """Initializes session using curl_cffi or standard requests fallback."""
-    if HAS_CURL_CFFI:
-        return curl_requests.Session(impersonate="chrome120")
-    import requests
-    return requests.Session()
-
-
-def authenticate_and_fetch_html(username, password):
-    """Performs session setup, token extraction, authentication, and endpoint resolution."""
-    session = get_http_session()
-    if not HAS_CURL_CFFI:
-        session.headers.update(HEADERS)
-
-    try:
-        session.get(BASE_URL, timeout=10)
-        res = session.get(LOGIN_PAGE, timeout=10)
-        
-        soup = BeautifulSoup(res.text, "html.parser")
-        token_input = (
-            soup.find("input", {"name": "token"}) or
-            soup.find("input", {"name": "csrf_token"}) or
-            soup.find("input", {"name": "csrf"})
-        )
-        token = token_input["value"] if (token_input and token_input.get("value")) else ""
-
-        login_payload = {"username": username, "password": password, "submit": "Login"}
-        if token:
-            login_payload["token"] = token
-
-        post_headers = {**HEADERS, "Referer": LOGIN_PAGE} if not HAS_CURL_CFFI else {}
-        res_login = session.post(LOGIN_ACTION, data=login_payload, headers=post_headers, timeout=10)
-        
-        html_content = res_login.text
-
-        # Validate login success
-        if "studentloginform" in html_content.lower() or "invalid password" in html_content.lower():
-            raise RuntimeError("Invalid Roll Number or Password.")
-
-        # Check if login landed on a redirection or dashboard splash page without tables
-        if "total" not in html_content.lower() and "subject" not in html_content.lower() and "held" not in html_content.lower():
-            attendance_endpoints = [
-                f"{BASE_URL}/student/attendance.php",
-                f"{BASE_URL}/student/student_attendance.php",
-                f"{BASE_URL}/student/index.php",
-                f"{BASE_URL}/student/dashboard.php"
-            ]
-            for endpoint in attendance_endpoints:
-                try:
-                    res_sub = session.get(endpoint, timeout=10)
-                    sub_text = res_sub.text.lower()
-                    if "total" in sub_text or "subject" in sub_text or "held" in sub_text or "present" in sub_text:
-                        html_content = res_sub.text
-                        break
-                except Exception:
-                    continue
-
-        return html_content
-    finally:
-        session.close()
-
-
 def parse_dashboard_html(html):
-    """Robustly scans HTML tables for subject names, attendance figures, and daily records."""
     soup = BeautifulSoup(html, "html.parser")
     data = {"profile": {}, "subjects": {}, "grand_total": None, "days": [], "analysis": {}}
 
@@ -153,7 +68,7 @@ def parse_dashboard_html(html):
         numbers = re.findall(r'\d+', val_str)
         return int(numbers[0]) if numbers else None
 
-    # 1. Parse Student Profile
+    # Parse Student Profile
     for cell in soup.find_all(["td", "th", "div", "span"]):
         txt = text_of(cell)
         if ("Roll No" in txt or "HTNO" in txt or "PIN" in txt) and ":" in txt:
@@ -163,7 +78,7 @@ def parse_dashboard_html(html):
 
     all_rows = soup.find_all("tr")
 
-    # 2. Extract Subject Metrics and Grand Total
+    # Extract Subject Metrics and Grand Total
     total_held_sum = 0
     total_present_sum = 0
 
@@ -175,7 +90,6 @@ def parse_dashboard_html(html):
         row_text = [text_of(c) for c in cells]
         combined_text = " ".join(row_text).lower()
 
-        # Skip table headers
         if any(kw in combined_text for kw in ["s.no", "sl.no", "subject name", "code", "percentage", "%"]):
             if "total" not in combined_text:
                 continue
@@ -215,7 +129,7 @@ def parse_dashboard_html(html):
     if not data["grand_total"] and total_held_sum > 0:
         data["grand_total"] = {"held": total_held_sum, "present": total_present_sum}
 
-    # 3. Extract Daily History
+    # Extract Daily History
     for row in all_rows:
         cells = row.find_all(["td", "th"])
         if len(cells) < 3:
@@ -245,51 +159,32 @@ def parse_dashboard_html(html):
     return data
 
 
-@app.after_request
-def add_cache_headers(response):
-    if request.path.startswith('/static/'):
-        response.headers['Cache-Control'] = 'public, max-age=31536000, immutable'
-    return response
-
-
 # --- ROUTES ---
 
 @app.route("/", methods=["GET"])
 def index():
-    return render_template("index.html", error=None)
+    return render_template("index.html")
 
 
-@app.route("/login", methods=["POST"])
-def login():
-    username = request.form.get("username", "").strip()
-    password = request.form.get("password", "")
+@app.route("/parse", methods=["POST"])
+def parse():
+    payload = request.get_json(silent=True) or {}
+    html_content = payload.get("html", "")
 
-    if not username or not password or len(username) > 30 or not re.match(r"^[a-zA-Z0-9]+$", username):
-        return render_template("index.html", error="Invalid Roll Number or Password format.")
+    if not html_content:
+        return jsonify({"success": False, "error": "No HTML content received."}), 400
 
-    if username in ATTENDANCE_CACHE:
-        return render_template("dashboard.html", data_json=json.dumps(ATTENDANCE_CACHE[username]))
+    parsed_data = parse_dashboard_html(html_content)
 
-    try:
-        html = authenticate_and_fetch_html(username, password)
+    if not parsed_data["subjects"] and not parsed_data["days"] and not parsed_data["grand_total"]:
+        return jsonify({"success": False, "error": "Dashboard loaded, but attendance data could not be parsed."}), 422
 
-        # Output preview snippet to Render logs for debugging
-        print("--- HTML RESPONSE PREVIEW ---")
-        print(html[:1500])
-        print("----------------------------")
+    return jsonify({"success": True, "data": parsed_data})
 
-        parsed_data = parse_dashboard_html(html)
 
-        if not parsed_data["subjects"] and not parsed_data["days"] and not parsed_data["grand_total"]:
-            return render_template("index.html", error="Dashboard found, but attendance format could not be parsed.")
-
-        ATTENDANCE_CACHE[username] = parsed_data
-        return render_template("dashboard.html", data_json=json.dumps(parsed_data))
-
-    except RuntimeError as err:
-        return render_template("index.html", error=str(err))
-    except Exception:
-        return render_template("index.html", error="Portal connection timeout. Try again shortly.")
+@app.route("/dashboard")
+def dashboard():
+    return render_template("dashboard.html")
 
 
 @app.route("/terms")
