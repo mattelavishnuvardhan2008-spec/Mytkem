@@ -51,24 +51,37 @@ def authenticate_and_fetch_html(username, password):
     session = requests.Session()
     session.headers.update(HEADERS)
 
-    # Fetch initial page
+    # 1. Establish PHP Session Cookies first
+    try:
+        session.get(BASE_URL, timeout=10)
+    except Exception as e:
+        print(f"Base site request warning: {e}")
+
+    # 2. Fetch login page
     res = session.get(LOGIN_PAGE, timeout=10)
     res.raise_for_status()
 
-    # Robust DOM token lookup
+    # Look for hidden token or CSRF inputs
     soup = BeautifulSoup(res.text, "html.parser")
-    token_input = soup.find("input", {"name": "token"})
-    if not token_input or not token_input.get("value"):
-        raise RuntimeError("Failed to extract login token. Portal structure may have changed.")
+    token_input = (
+        soup.find("input", {"name": "token"}) or
+        soup.find("input", {"name": "csrf_token"}) or
+        soup.find("input", {"name": "csrf"})
+    )
 
-    token = token_input["value"]
+    token = token_input["value"] if (token_input and token_input.get("value")) else ""
+
+    if not token_input:
+        print("DEBUG WARNING: Token field not found in login HTML response.")
+        print("Received HTML snippet:", res.text[:300])
 
     login_payload = {
-        "token": token,
         "username": username,
         "password": password,
         "submit": "Login",
     }
+    if token:
+        login_payload["token"] = token
 
     # Authenticate
     res_login = session.post(
@@ -170,8 +183,8 @@ def login():
     if not username or not password:
         return render_template("index.html", error="Please enter both Roll Number and Password.")
 
-    if len(username) > 30 or not re.match(r"^[a-zA-Z0-9_-]+$", username):
-        return render_template("index.html", error="Invalid Roll Number format.")
+    if len(username) > 40:
+        return render_template("index.html", error="Invalid Roll Number length.")
 
     # 1. CHECK IN-MEMORY TTL CACHE
     if username in ATTENDANCE_CACHE:
