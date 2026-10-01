@@ -1,49 +1,97 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TKREC Attendance - Login</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TKREC Attendance</title>
+    <style>
+        body { background-color: #0f172a; color: #f8fafc; font-family: sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .card { background: #1e293b; padding: 2rem; border-radius: 12px; width: 100%; max-width: 400px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        input { width: 100%; padding: 0.75rem; margin: 0.5rem 0 1rem; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: #fff; box-sizing: border-box; }
+        button { width: 100%; padding: 0.75rem; background: #eab308; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; color: #0f172a; }
+        button:disabled { opacity: 0.6; cursor: not-allowed; }
+        .error { color: #ef4444; margin-top: 1rem; font-size: 0.9rem; text-align: center; }
+        .links { margin-top: 1.5rem; display: flex; justify-content: space-between; font-size: 0.8rem; }
+        .links a { color: #94a3b8; text-decoration: none; }
+    </style>
 </head>
-<body class="login-body">
-  <div class="auth-container">
-    <div class="crafted-by-login">CRAFTED BY <span class="gold-text">&nbsp;VISHNU</span></div>
-    <div class="auth-card">
-      <h1>TKREC Attendance</h1>
-      <form action="/login" method="POST" id="loginForm">
-        <div class="form-group">
-          <label for="username">USERNAME</label>
-          <input type="text" id="username" name="username" required autocomplete="off">
+<body>
+    <div class="card">
+        <h2>TKREC Attendance</h2>
+        <form id="loginForm">
+            <label>USERNAME</label>
+            <input type="text" id="username" required>
+            
+            <label>PASSWORD</label>
+            <input type="password" id="password" required>
+            
+            <button type="submit" id="submitBtn">Log In</button>
+        </form>
+        <div id="errorMsg" class="error"></div>
+        <div class="links">
+            <a href="/terms">Terms & Conditions</a>
+            <a href="/privacy">Privacy Policy</a>
         </div>
-        <div class="form-group">
-          <label for="password">PASSWORD</label>
-          <input type="password" id="password" name="password" required>
-        </div>
-        <!-- Button updated with ID -->
-        <button type="submit" class="btn-submit" id="submitBtn">Log In</button>
-      </form>
-
-      {% if error %}
-      <div class="err-msg">{{ error }}</div>
-      {% endif %}
-
-      <div class="legal-links">
-        <a href="/terms" class="legal-link">Terms & Conditions</a>
-        <a href="/privacy" class="legal-link">Privacy Policy</a>
-      </div>
     </div>
-  </div>
 
-  <!-- FIX 3: Loading Indicator JS -->
-  <script>
-    document.getElementById('loginForm').addEventListener('submit', function() {
-      const btn = document.getElementById('submitBtn');
-      btn.innerText = 'Fetching Attendance...';
-      btn.style.opacity = '0.7';
-      btn.style.cursor = 'not-allowed';
-    });
-  </script>
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('submitBtn');
+            const errDiv = document.getElementById('errorMsg');
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+
+            btn.disabled = true;
+            btn.innerText = "Authenticating...";
+            errDiv.innerText = "";
+
+            try {
+                // Client-side fetch via CORS proxy bypasses Render datacenter IP ban
+                const proxyUrl = "https://corsproxy.io/?" + encodeURIComponent("https://tkrec.in/student_login_action.php");
+                
+                const formData = new URLSearchParams();
+                formData.append('username', username);
+                formData.append('password', password);
+                formData.append('submit', 'Login');
+
+                const response = await fetch(proxyUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: formData
+                });
+
+                const htmlText = await response.text();
+
+                if (htmlText.toLowerCase().includes("studentloginform") || htmlText.toLowerCase().includes("invalid")) {
+                    throw new Error("Invalid Roll Number or Password.");
+                }
+
+                btn.innerText = "Analyzing Attendance...";
+
+                // Send raw HTML to backend parser
+                const parseResponse = await fetch('/parse', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ html: htmlText })
+                });
+
+                const parseResult = await parseResponse.json();
+
+                if (!parseResult.success) {
+                    throw new Error(parseResult.error || "Could not parse attendance.");
+                }
+
+                // Store parsed data in sessionStorage and navigate to dashboard
+                sessionStorage.setItem('attendanceData', JSON.stringify(parseResult.data));
+                window.location.href = '/dashboard';
+
+            } catch (err) {
+                errDiv.innerText = err.message || "Connection failed. Please try again.";
+                btn.disabled = false;
+                btn.innerText = "Log In";
+            }
+        });
+    </script>
 </body>
 </html>
