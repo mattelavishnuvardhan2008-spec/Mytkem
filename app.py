@@ -133,7 +133,7 @@ def parse_dashboard_html(html):
         numbers = re.findall(r'\d+', val_str)
         return int(numbers[0]) if numbers else None
 
-    # Parse Details
+    # Parse Profile Details
     for cell in soup.find_all(["td", "th"]):
         txt = text_of(cell)
         if "Roll No" in txt or "HTNO" in txt:
@@ -202,6 +202,20 @@ def parse_dashboard_html(html):
     return data
 
 
+@app.after_request
+def add_cache_headers(response):
+    if request.path.startswith('/static/'):
+        response.headers['Cache-Control'] = 'public, max-age=31536000, immutable'
+    return response
+
+
+# --- ROUTES ---
+
+@app.route("/", methods=["GET"])
+def index():
+    return render_template("index.html", error=None)
+
+
 @app.route("/login", methods=["POST"])
 def login():
     username = request.form.get("username", "").strip()
@@ -227,3 +241,17 @@ def login():
         return render_template("index.html", error=str(err))
     except Exception:
         return render_template("index.html", error="Portal connection timeout. Try again shortly.")
+
+
+@app.route("/terms")
+def terms():
+    return render_template("terms.html")
+
+
+@app.route("/privacy")
+def privacy():
+    return render_template("privacy.html")
+
+
+if __name__ == "__main__":
+    app.run(debug=False)
