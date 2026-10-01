@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TKREC Attendance - Login</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="login-body">
+  <div class="auth-container">
+    <div class="crafted-by-login">CRAFTED BY <span class="gold-text">&nbsp;VISHNU</span></div>
+    <div class="auth-card">
+      <h1>TKREC Attendance</h1>
+      <form action="/login" method="POST" id="loginForm">
+        <div class="form-group">
+          <label for="username">USERNAME</label>
+          <input type="text" id="username" name="username" required autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label for="password">PASSWORD</label>
+          <input type="password" id="password" name="password" required>
+        </div>
+        <!-- Button updated with ID -->
+        <button type="submit" class="btn-submit" id="submitBtn">Log In</button>
+      </form>
+
+      {% if error %}
+      <div class="err-msg">{{ error }}</div>
+      {% endif %}
+
+      <div class="legal-links">
+        <a href="/terms" class="legal-link">Terms & Conditions</a>
+        <a href="/privacy" class="legal-link">Privacy Policy</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- FIX 3: Loading Indicator JS -->
+  <script>
+    document.getElementById('loginForm').addEventListener('submit', function() {
+      const btn = document.getElementById('submitBtn');
+      btn.innerText = 'Fetching Attendance...';
+      btn.style.opacity = '0.7';
+      btn.style.cursor = 'not-allowed';
+    });
+  </script>
+</body>
+</html>
