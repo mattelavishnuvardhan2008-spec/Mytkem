@@ -1,7 +1,7 @@
-flask
+Flask
 requests
 beautifulsoup4
-gunicorn
-flask-compress
-flask-talisman
 cachetools
+Flask-Compress
+Flask-Talisman
+gunicorn
