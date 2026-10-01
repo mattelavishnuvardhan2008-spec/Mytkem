@@ -12,7 +12,7 @@
     <div class="crafted-by-login">CRAFTED BY <span class="gold-text">&nbsp;VISHNU</span></div>
     <div class="auth-card">
       <h1>TKREC Attendance</h1>
-      <form action="/login" method="POST" id="loginForm">
+      <form id="loginForm">
         <div class="form-group">
           <label for="username">USERNAME</label>
           <input type="text" id="username" name="username" required autocomplete="off">
@@ -21,13 +21,10 @@
           <label for="password">PASSWORD</label>
           <input type="password" id="password" name="password" required>
         </div>
-        <!-- Button updated with ID -->
         <button type="submit" class="btn-submit" id="submitBtn">Log In</button>
       </form>
 
-      {% if error %}
-      <div class="err-msg">{{ error }}</div>
-      {% endif %}
+      <div id="errMsg" class="err-msg" style="display: none;"></div>
 
       <div class="legal-links">
         <a href="/terms" class="legal-link">Terms & Conditions</a>
@@ -36,13 +33,100 @@
     </div>
   </div>
 
-  <!-- FIX 3: Loading Indicator JS -->
   <script>
-    document.getElementById('loginForm').addEventListener('submit', function() {
+    document.getElementById('loginForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
       const btn = document.getElementById('submitBtn');
-      btn.innerText = 'Fetching Attendance...';
+      const errDiv = document.getElementById('errMsg');
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+
+      btn.innerText = 'Connecting to TKREC...';
       btn.style.opacity = '0.7';
       btn.style.cursor = 'not-allowed';
+      btn.disabled = true;
+      errDiv.style.display = 'none';
+
+      const proxyBase = "https://corsproxy.io/?";
+
+      try {
+        // Step 1: Initial GET request to initialize session
+        btn.innerText = 'Authenticating...';
+        const loginPageUrl = proxyBase + encodeURIComponent("https://tkrec.in/index.php");
+        await fetch(loginPageUrl);
+
+        // Step 2: Client-side POST authentication call
+        const loginActionUrl = proxyBase + encodeURIComponent("https://tkrec.in/student_login_action.php");
+        const formData = new URLSearchParams();
+        formData.append('username', username);
+        formData.append('password', password);
+        formData.append('submit', 'Login');
+
+        const postResponse = await fetch(loginActionUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: formData
+        });
+
+        let htmlText = await postResponse.text();
+
+        if (htmlText.toLowerCase().includes("studentloginform") || htmlText.toLowerCase().includes("invalid")) {
+          throw new Error("Invalid Roll Number or Password.");
+        }
+
+        // Step 3: Check and fetch secondary dashboard endpoints if needed
+        btn.innerText = 'Fetching Attendance...';
+        const attendanceEndpoints = [
+          "https://tkrec.in/student/attendance.php",
+          "https://tkrec.in/student/student_attendance.php",
+          "https://tkrec.in/student/index.php",
+          "https://tkrec.in/student/dashboard.php"
+        ];
+
+        if (!htmlText.toLowerCase().includes("total") && !htmlText.toLowerCase().includes("held") && !htmlText.toLowerCase().includes("present")) {
+          for (const endpoint of attendanceEndpoints) {
+            try {
+              const targetUrl = proxyBase + encodeURIComponent(endpoint);
+              const res = await fetch(targetUrl);
+              const subHtml = await res.text();
+              
+              if (subHtml.toLowerCase().includes("total") || subHtml.toLowerCase().includes("held") || subHtml.toLowerCase().includes("present") || subHtml.toLowerCase().includes("subject")) {
+                htmlText = subHtml;
+                break;
+              }
+            } catch (err) {
+              console.warn("Endpoint attempt failed:", endpoint);
+            }
+          }
+        }
+
+        btn.innerText = 'Analyzing Data...';
+
+        // Step 4: Send fetched raw HTML to Flask server parser
+        const parseResponse = await fetch('/parse', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, html: htmlText })
+        });
+
+        const parseResult = await parseResponse.json();
+
+        if (!parseResult.success) {
+          throw new Error(parseResult.error || "Could not parse attendance structure.");
+        }
+
+        // Redirect to dashboard page
+        window.location.href = parseResult.redirect;
+
+      } catch (err) {
+        errDiv.innerText = err.message || "Connection failed. Please try again.";
+        errDiv.style.display = 'block';
+        btn.disabled = false;
+        btn.style.opacity = '1';
+        btn.style.cursor = 'pointer';
+        btn.innerText = 'Log In';
+      }
     });
   </script>
 </body>
