@@ -1,8 +1,0 @@
-Flask
-requests
-curl_cffi
-beautifulsoup4
-cachetools
-Flask-Compress
-Flask-Talisman
-gunicorn
