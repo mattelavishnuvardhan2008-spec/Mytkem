@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import json
+import math
 import re
 from bs4 import BeautifulSoup
 from cachetools import TTLCache
@@ -13,10 +14,9 @@ LOGIN_PAGE = f"{BASE_URL}/index.php"
 LOGIN_ACTION = f"{BASE_URL}/student_login_action.php"
 
 HEADERS = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
     'Accept-Language': 'en-US,en;q=0.9',
-    'Accept-Encoding': 'gzip, deflate, br',
     'Connection': 'keep-alive',
     'Upgrade-Insecure-Requests': '1',
 }
@@ -32,13 +32,7 @@ csp = {
     'img-src': ["'self'", "data:", "https:"]
 }
 
-Talisman(
-    app,
-    content_security_policy=csp,
-    force_https=True
-)
-
-# Cache up to 500 roll numbers for 30 minutes
+Talisman(app, content_security_policy=csp, force_https=True)
 ATTENDANCE_CACHE = TTLCache(maxsize=500, ttl=1800)
 
 
@@ -46,17 +40,42 @@ def text_of(el):
     return el.get_text(strip=True) if el else ""
 
 
+def calculate_analysis(held, present, target_pct=75.0):
+    """Calculates bunkable/required classes to maintain 75% attendance."""
+    if held <= 0:
+        return {"current_pct": 0.0, "status": "No Data", "margin_message": "No classes held yet."}
+
+    current_pct = (present / held) * 100
+
+    if current_pct >= target_pct:
+        bunkable = math.floor((100 * present - target_pct * held) / target_pct)
+        return {
+            "current_pct": round(current_pct, 2),
+            "status": "Safe",
+            "bunkable": bunkable,
+            "margin_message": f"You can safely skip the next {bunkable} classes." if bunkable > 0 else "You are right at the 75% threshold."
+        }
+    else:
+        needed = math.ceil((target_pct * held - 100 * present) / (100 - target_pct))
+        return {
+            "current_pct": round(current_pct, 2),
+            "status": "Shortage",
+            "needed": needed,
+            "margin_message": f"You need to attend the next {needed} classes consecutively to reach 75%."
+        }
+
+
 def authenticate_and_fetch_html(username, password):
     session = requests.Session()
     session.headers.update(HEADERS)
 
-    # 1. Establish PHP Session Cookies first by visiting the home URL
+    # Base request to establish cookies
     try:
         session.get(BASE_URL, timeout=10)
     except Exception as e:
         print(f"Base site request warning: {e}")
 
-    # 2. Fetch login page to capture any hidden form tokens
+    # GET login page
     res = session.get(LOGIN_PAGE, timeout=10)
     res.raise_for_status()
 
@@ -66,11 +85,7 @@ def authenticate_and_fetch_html(username, password):
         soup.find("input", {"name": "csrf_token"}) or
         soup.find("input", {"name": "csrf"})
     )
-
     token = token_input["value"] if (token_input and token_input.get("value")) else ""
-
-    if not token_input:
-        print("DEBUG WARNING: Token field not found in login HTML response.")
 
     login_payload = {
         "username": username,
@@ -80,7 +95,7 @@ def authenticate_and_fetch_html(username, password):
     if token:
         login_payload["token"] = token
 
-    # 3. Perform login POST request with initialized cookies and referer
+    # POST authentication
     res_login = session.post(
         LOGIN_ACTION,
         data=login_payload,
@@ -90,7 +105,7 @@ def authenticate_and_fetch_html(username, password):
     res_login.raise_for_status()
     html_content = res_login.text
 
-    # 4. Check whether authentication succeeded or redirected
+    # Follow redirect to student dashboard if required
     if "studentloginform" in html_content.lower() or "invalid" in html_content.lower():
         res_dashboard = session.get(f"{BASE_URL}/student/index.php", timeout=10)
         if "studentloginform" in res_dashboard.text.lower():
@@ -103,59 +118,87 @@ def authenticate_and_fetch_html(username, password):
 
 def parse_dashboard_html(html):
     soup = BeautifulSoup(html, "html.parser")
-    data = {"profile": {}, "subjects": {}, "grand_total": None, "days": []}
+    data = {"profile": {}, "subjects": {}, "grand_total": None, "days": [], "analysis": {}}
 
-    for row in soup.find_all("tr"):
-        cells = row.find_all(["td", "th"])
-        if len(cells) >= 2:
-            label = text_of(cells[0]).lower()
-            if "roll" in label or "htno" in label:
-                data["profile"]["roll"] = text_of(cells[1])
-            elif "student" in label or "name" in label:
-                data["profile"]["name"] = text_of(cells[1])
+    # 1. Parse Student Profile
+    for cell in soup.find_all(["td", "th"]):
+        txt = text_of(cell)
+        if "Roll No" in txt or "HTNO" in txt:
+            data["profile"]["roll"] = txt.split(":")[-1].strip() if ":" in txt else txt
+        elif "Student" in txt or "Name" in txt:
+            data["profile"]["name"] = txt.split(":")[-1].strip() if ":" in txt else txt
 
+    # 2. Parse Tables
     for table in soup.find_all("table"):
         rows = table.find_all("tr")
         if not rows:
             continue
 
-        header_text = " ".join(text_of(c) for c in rows[0].find_all(["td", "th"])).lower()
+        table_text = table.get_text().lower()
 
-        if "subject" in header_text or "code" in header_text:
+        # Subject-wise attendance table
+        if "subject" in table_text and ("classes" in table_text or "c" in table_text):
             for row in rows:
                 cells = row.find_all(["td", "th"])
                 if len(cells) < 3:
                     continue
-                subj = text_of(cells[0])
-                c_txt, a_txt = text_of(cells[1]), text_of(cells[2])
 
-                if subj.lower().startswith("total") or "grand" in subj.lower():
-                    if c_txt.isdigit() and a_txt.isdigit():
-                        data["grand_total"] = {"held": int(c_txt), "present": int(a_txt)}
+                subj_name = text_of(cells[0])
+                c_val = text_of(cells[1])
+                a_val = text_of(cells[2])
+
+                if "total" in subj_name.lower():
+                    if c_val.isdigit() and a_val.isdigit():
+                        data["grand_total"] = {"held": int(c_val), "present": int(a_val)}
                     continue
 
-                if c_txt.isdigit() and a_txt.isdigit():
-                    data["subjects"][subj] = {"held": int(c_txt), "present": int(a_txt)}
+                if c_val.isdigit() and a_val.isdigit():
+                    if subj_name.lower() in ["subject", "classes", "attendance"]:
+                        continue
+                    
+                    held = int(c_val)
+                    present = int(a_val)
+                    subject_analysis = calculate_analysis(held, present)
+                    
+                    data["subjects"][subj_name] = {
+                        "held": held,
+                        "present": present,
+                        "pct": subject_analysis["current_pct"],
+                        "status": subject_analysis["status"],
+                        "margin_message": subject_analysis["margin_message"]
+                    }
 
-        if "date" in header_text:
-            for row in rows[1:]:
+        # Daily Attendance Table
+        if "periods" in table_text or "date" in table_text:
+            for row in rows:
                 cells = row.find_all(["td", "th"])
-                if len(cells) < 3:
-                    continue
-                date = text_of(cells[0])
-                if not re.match(r"^\d{1,2}[-/\.]\d{1,2}[-/\.]\d{2,4}$", date):
+                if len(cells) < 4:
                     continue
 
-                mid = [text_of(c) for c in cells[1:-2]]
-                periods = [p.upper() for p in mid if p.upper() in ("P", "A")]
+                date_text = text_of(cells[0])
+                if re.match(r"^\d{1,2}[-/\.]\d{1,2}[-/\.]\d{2,4}$", date_text):
+                    period_cells = [text_of(c).upper() for c in cells[1:-2]]
+                    periods = [p for p in period_cells if p in ("P", "A")]
 
-                total_txt, attend_txt = text_of(cells[-2]), text_of(cells[-1])
-                total = int(total_txt) if total_txt.isdigit() else len(periods)
-                attend = int(attend_txt) if attend_txt.isdigit() else periods.count("P")
+                    tot_txt = text_of(cells[-2])
+                    att_txt = text_of(cells[-1])
 
-                data["days"].append(
-                    {"date": date, "periods": periods, "total": total, "attend": attend}
-                )
+                    total = int(tot_txt) if tot_txt.isdigit() else len(periods)
+                    attend = int(att_txt) if att_txt.isdigit() else periods.count("P")
+
+                    data["days"].append({
+                        "date": date_text,
+                        "periods": periods,
+                        "total": total,
+                        "attend": attend
+                    })
+
+    # Overall Analysis calculation
+    if data["grand_total"]:
+        data["analysis"] = calculate_analysis(
+            data["grand_total"]["held"],
+            data["grand_total"]["present"]
+        )
 
     return data
 
