@@ -9,7 +9,7 @@ from flask import Flask, render_template, request
 from flask_compress import Compress
 from flask_talisman import Talisman
 
-# Optional import for TLS fingerprinting to bypass anti-bot blocks
+# Anti-Bot TLS Fingerprinting
 try:
     from curl_cffi import requests as curl_requests
     HAS_CURL_CFFI = True
@@ -48,7 +48,7 @@ Talisman(
     session_cookie_http_only=True
 )
 
-# 30-minute server cache to mitigate rate-limiting and portal bans
+# 30-minute server cache to mitigate rate-limiting and college portal IP blocks
 ATTENDANCE_CACHE = TTLCache(maxsize=500, ttl=1800)
 
 
@@ -58,7 +58,7 @@ def text_of(el):
 
 
 def calculate_analysis(held, present, target_pct=75.0):
-    """Calculates percentage, bunk margin, or required classes for target threshold."""
+    """Calculates attendance status, bunkable classes, or needed classes."""
     if held <= 0:
         return {"current_pct": 0.0, "status": "No Data", "margin_message": "No classes recorded yet."}
 
@@ -91,7 +91,7 @@ def get_http_session():
 
 
 def authenticate_and_fetch_html(username, password):
-    """Performs cookie initializations, token scraping, and authenticates user."""
+    """Performs session setup, token extraction, authentication, and endpoint resolution."""
     session = get_http_session()
     if not HAS_CURL_CFFI:
         session.headers.update(HEADERS)
@@ -116,11 +116,28 @@ def authenticate_and_fetch_html(username, password):
         res_login = session.post(LOGIN_ACTION, data=login_payload, headers=post_headers, timeout=10)
         
         html_content = res_login.text
-        if "studentloginform" in html_content.lower() or "invalid" in html_content.lower():
-            res_dashboard = session.get(f"{BASE_URL}/student/index.php", timeout=10)
-            if "studentloginform" in res_dashboard.text.lower():
-                raise RuntimeError("Invalid Roll Number or Password.")
-            html_content = res_dashboard.text
+
+        # Validate login success
+        if "studentloginform" in html_content.lower() or "invalid password" in html_content.lower():
+            raise RuntimeError("Invalid Roll Number or Password.")
+
+        # Check if login landed on a redirection or dashboard splash page without tables
+        if "total" not in html_content.lower() and "subject" not in html_content.lower() and "held" not in html_content.lower():
+            attendance_endpoints = [
+                f"{BASE_URL}/student/attendance.php",
+                f"{BASE_URL}/student/student_attendance.php",
+                f"{BASE_URL}/student/index.php",
+                f"{BASE_URL}/student/dashboard.php"
+            ]
+            for endpoint in attendance_endpoints:
+                try:
+                    res_sub = session.get(endpoint, timeout=10)
+                    sub_text = res_sub.text.lower()
+                    if "total" in sub_text or "subject" in sub_text or "held" in sub_text or "present" in sub_text:
+                        html_content = res_sub.text
+                        break
+                except Exception:
+                    continue
 
         return html_content
     finally:
@@ -128,7 +145,7 @@ def authenticate_and_fetch_html(username, password):
 
 
 def parse_dashboard_html(html):
-    """Scans all table rows dynamically using regex integer extraction."""
+    """Robustly scans HTML tables for subject names, attendance figures, and daily records."""
     soup = BeautifulSoup(html, "html.parser")
     data = {"profile": {}, "subjects": {}, "grand_total": None, "days": [], "analysis": {}}
 
@@ -136,7 +153,7 @@ def parse_dashboard_html(html):
         numbers = re.findall(r'\d+', val_str)
         return int(numbers[0]) if numbers else None
 
-    # 1. Parse Profile Information
+    # 1. Parse Student Profile
     for cell in soup.find_all(["td", "th", "div", "span"]):
         txt = text_of(cell)
         if ("Roll No" in txt or "HTNO" in txt or "PIN" in txt) and ":" in txt:
@@ -146,7 +163,7 @@ def parse_dashboard_html(html):
 
     all_rows = soup.find_all("tr")
 
-    # 2. Dynamic Subject & Grand Total Extraction
+    # 2. Extract Subject Metrics and Grand Total
     total_held_sum = 0
     total_present_sum = 0
 
@@ -158,7 +175,7 @@ def parse_dashboard_html(html):
         row_text = [text_of(c) for c in cells]
         combined_text = " ".join(row_text).lower()
 
-        # Ignore standard header/title lines
+        # Skip table headers
         if any(kw in combined_text for kw in ["s.no", "sl.no", "subject name", "code", "percentage", "%"]):
             if "total" not in combined_text:
                 continue
@@ -166,7 +183,7 @@ def parse_dashboard_html(html):
         row_numbers = []
         subject_label = ""
 
-        for idx, cell_txt in enumerate(row_text):
+        for cell_txt in row_text:
             num = extract_int(cell_txt)
             if num is not None:
                 row_numbers.append(num)
@@ -198,7 +215,7 @@ def parse_dashboard_html(html):
     if not data["grand_total"] and total_held_sum > 0:
         data["grand_total"] = {"held": total_held_sum, "present": total_present_sum}
 
-    # 3. Daily Attendance Extraction
+    # 3. Extract Daily History
     for row in all_rows:
         cells = row.find_all(["td", "th"])
         if len(cells) < 3:
@@ -255,6 +272,12 @@ def login():
 
     try:
         html = authenticate_and_fetch_html(username, password)
+
+        # Output preview snippet to Render logs for debugging
+        print("--- HTML RESPONSE PREVIEW ---")
+        print(html[:1500])
+        print("----------------------------")
+
         parsed_data = parse_dashboard_html(html)
 
         if not parsed_data["subjects"] and not parsed_data["days"] and not parsed_data["grand_total"]:
